@@ -1,11 +1,39 @@
 import { Router } from "express";
 import {
-	
+	send_registrer_Otp,
+	sendForgotPasswordOTP,
+	verifyOtp,
+	registerUser,
+	loginUser,
+	logoutUser,
+	refreshAccessToken,
+	changeCurrentPassword,
+	getCurrentUser,
+	updateAccountDetails,
+	updateUserAvatar,
+
+	submitWasteReport,
+	getResidentDashboard,
+	getWasteHistory,
 } from "../controllers/residents.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/Auth.middleware.js";
 
 const router = Router();
 
+router.post("/send_registrer_otp", send_registrer_Otp);
+router.post("/send_forgot_password_otp", sendForgotPasswordOTP);
+router.post("/verify_otp", verifyOtp);
+router.post("/register", registerUser);
+router.post("/login", loginUser);
+router.post("/logout", verifyJWT,logoutUser);
+router.post("/refresh_token", refreshAccessToken);
+router.post("/change_current_password", verifyJWT, changeCurrentPassword);
+router.get("/current_user", verifyJWT, getCurrentUser);
+router.post("/update_account_details", verifyJWT, updateAccountDetails);
+router.post("/update_user_avatar", verifyJWT, upload.single("avatar"), updateUserAvatar);
+router.post("/submit_waste_report", verifyJWT, submitWasteReport);
+router.get("/get_resident_dashboard", verifyJWT, getResidentDashboard);
+router.get("/get_waste_history", verifyJWT, getWasteHistory);
 	
 export default router;

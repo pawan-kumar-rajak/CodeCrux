@@ -1,3 +1,5 @@
+import { Schema,mongoose } from "mongoose";
+
 const binSchema = new Schema(
     {
       binId: {

@@ -4,14 +4,7 @@ import bcrypt from "bcrypt";
 
 const residentSchema = new Schema(
     {
-        username: {
-            type: String,
-            required: true,
-            unique: true,
-            lowercase: true,
-            trim: true,
-            index: true,
-        },
+     
         email: {
             type: String,
             required: true,
@@ -28,14 +21,14 @@ const residentSchema = new Schema(
             type: String,
             default: "https://cdn-icons-png.flaticon.com/512/3177/3177440.png",
         },
-        phoneNumber: {
+        phoneNo: {
             type: String,
             required: true,
             trim: true,
         },
         address: {
-            type: String,
-            required: true, // For geo-tracking waste collection
+            type: Schema.Types.ObjectId,
+            ref: "Address",
         },
         points: {
             type: Number,

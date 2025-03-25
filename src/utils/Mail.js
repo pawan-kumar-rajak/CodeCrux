@@ -13,11 +13,11 @@ const transporter = nodemailer.createTransport({
 });
 
 
-const sendOTPs = async (to, subject, text) => {
+const sendOTPs = async (to, subject, text, validity) => {
   const currentYear = new Date().getFullYear();
 
   await transporter.sendMail({
-    from: `"Crafted India" <${process.env.EMAIL}>`,
+    from: `"Clean-City" <${process.env.EMAIL}>`,
     to,
     subject,
     html: `
@@ -89,8 +89,10 @@ const sendOTPs = async (to, subject, text) => {
               <div class="email-content">
                 <h1>Hey Buddy , Don't share this OTP to anyone !</h1>
                 <p>Your OTP is <h2>${text}</h2></p>
+                <br>
+                <h3>${validity}</h3>
                 <footer>
-                  <p>&copy; ${currentYear} Crafted India. All Rights Reserved.</p>
+                  <p>&copy; ${currentYear} Clean City. All Rights Reserved.</p>
                 </footer>
               </div>
             </div>
@@ -100,12 +102,11 @@ const sendOTPs = async (to, subject, text) => {
     text: `your OTP is : ${text}`,
   });
 }
-
 const sendFollowUp = async (user) => {
   const currentYear = new Date().getFullYear();
 
   await transporter.sendMail({
-    from: `"Crafted India" <${process.env.EMAIL}>`,
+    from: `"Clean-City" <${process.env.EMAIL}>`,
     to: user.email,
     subject: "Welcome to Our Platform!",
     html: `
@@ -170,18 +171,18 @@ const sendFollowUp = async (user) => {
           <body>
             <div class="email-container">
               <div class="email-content">
-                <h1>Welcome to Our Platform Crafted India!</h1>
-                <p>Dear ${user.fullName},\n\nThank you for registering. We're excited to have you onboard!\n\nBest regards,\nThe Team Crafted India</p>
+                <h1>Welcome to Our Platform MyTrands4u!</h1>
+                <p>Dear ${user.fullName},\n\nThank you for registering. We're excited to have you onboard!\n\nBest regards,\nThe Team MyTrands4u India</p>
             
                 <footer>
-                  <p>&copy; ${currentYear} Crafted India. All Rights Reserved.</p>
+                  <p>&copy; ${currentYear} Clean City India. All Rights Reserved.</p>
                 </footer>
               </div>
             </div>
           </body>
         </html>
       `,
-    text: `Dear ${user.fullName},\n\nThank you for registering. We're excited to have you onboard!\n\nBest regards,\nThe Team Crafted India`,
+    text: `Dear ${user.fullName},\n\nThank you for registering. We're excited to have you onboard!\n\nBest regards,\nThe Team Clean City India`,
   })
 }
 

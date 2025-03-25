@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import multer from "multer";
-import customerRoutes from "./routes/residents.routes.js";
+import residentRoutes from "./routes/residents.routes.js";
 import { uploadOnCloudinary } from "./utils/cloudinary.js";
 import http from "http";
 import axios from "axios";
@@ -21,13 +21,7 @@ app.use('/public', express.static('public'))
 app.use(cookieParser());
 
 
-const server = app.listen(process.env.PORT || 5000, () => {
-	console.log(
-		"Server running on port ${process.env.PORT} || 5000"
-	);
-});
-
-app.use("/api/v1/customers", customerRoutes);
+app.use("/api/v1/residents", residentRoutes);
 app.get("/postoffices/nearby", async (req, res) => {
 	const { zipcode } = req.query; // Use req.query to retrieve the zipcode
 	if (!zipcode) {

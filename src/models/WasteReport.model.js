@@ -1,3 +1,4 @@
+import { Schema,mongoose } from "mongoose";
 const wasteReportSchema = new Schema(
     {
       user: {
@@ -14,8 +15,8 @@ const wasteReportSchema = new Schema(
         type: Number, // in kg
         required: true,
       },
-      image: {
-        type: String, // Cloudinary URL
+      images: {
+        type: [String], // Cloudinary URL
       },
       status: {
         type: String,

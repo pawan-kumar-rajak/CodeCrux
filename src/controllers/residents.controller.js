@@ -7,6 +7,7 @@ import {
 import {
 	uploadOnCloudinary,
 	deleteImageFromCloudinary,
+	MultiUploadOnCloudinary,
 } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
@@ -14,17 +15,22 @@ import { OTP } from "../models/otp.model.js";
 import { sendOTPs, sendFollowUp } from "../utils/Mail.js";
 import { Address } from "../models/address.model.js";
 import mongoose from "mongoose";
+import { parseCoordinates, AddressFromPincode } from "../utils/location_handling.js";
+import { Bin } from "../models/bin.model.js";
+import { WasteReport } from "../models/wasteReport.model.js";
 
 const generateAccessAndRefereshTokens = async (userId) => {
 	try {
+
 		const user = await User.findById(userId);
 		const accessToken = user.generateAccessToken();
-		const newRefreshToken = user.generateRefreshToken();
+		const refreshToken = user.generateRefreshToken();
 
-		user.refreshToken = newRefreshToken;
+
+		user.refreshToken = refreshToken;
 		await user.save({ validateBeforeSave: false });
 
-		return { accessToken, newRefreshToken };
+		return { accessToken, refreshToken };
 	} catch (error) {
 		throw new ApiError(
 			500,
@@ -33,12 +39,19 @@ const generateAccessAndRefereshTokens = async (userId) => {
 	}
 };
 
+
 //send OTP functionality
-const sendOtp = asyncHandler(async (req, res) => {
+const send_registrer_Otp = asyncHandler(async (req, res, next) => {
 	const { email } = req.body;
 
 	if (!email) {
-		throw new ApiError(400, "Email is required");
+		return next(new ApiError(400, "Email is required"));
+
+	}
+
+	const existedUser = await Customer.findOne({ email });
+	if (existedUser) {
+		throw new ApiError(409, 'User already existed ');
 	}
 
 	const otp = Math.random()
@@ -48,7 +61,7 @@ const sendOtp = asyncHandler(async (req, res) => {
 	const otpExpiry = Date.now() + 10 * 60 * 1000; // OTP valid for 10 minutes
 
 	// Send OTP via email
-	await sendOTPs(email, "Your OTP Code", otp);
+	await sendOTPs(email, "Your OTP Code", otp, "This OTP is valid for 10 minutes");
 
 	// Save OTP to DB
 	const existingOtp = await OTP.findOne({ email });
@@ -71,12 +84,92 @@ const sendOtp = asyncHandler(async (req, res) => {
 		);
 });
 
+const sendForgotPasswordOTP = asyncHandler(async (req, res, next) => {
+	const { email } = req.body;
+
+	if (!email || email.trim() === "") {
+		return next(new ApiError(400, "Email is required"));
+
+	}
+
+	// Check if user exists
+	const user = await User.findOne({ email });
+	if (!user) {
+		return next(new ApiError(404, "User with this email does not exist"));
+
+	}
+
+	// Generate OTP and expiry time
+	const otp = Math.random()
+		.toString(36)
+		.substring(2, 8)
+		.toUpperCase(); // 6-character OTP
+	const otpExpiry = Date.now() + 10 * 60 * 1000; // OTP valid for 10 minutes
+
+	// Save OTP in database
+	await OTP.findOneAndUpdate(
+		{ email },
+		{ otp, otpExpiry },
+		{ upsert: true, new: true }
+	);
+
+	// Send OTP via email
+	const subject = "Reset Your Password - OTP Verification";
+	const validty = `This OTP is valid for 10 minutes.`;
+	await sendOTPs(email, subject, otp, validty)
+
+	res.status(200).json(
+		new ApiResponse(200, {}, "OTP sent to your email successfully")
+	);
+});
+
+
+const change_email_otp = asyncHandler(async (req, res, next) => {
+	const { email } = req.body;
+
+	if (!email || email.trim() === "") {
+		return next(new ApiError(400, "Email is required"));
+
+	}
+
+	// Check if user exists
+	const user = await User.findOne({ email });
+	if (!user) {
+		return next(new ApiError(404, "User with this email does not exist"));
+
+	}
+
+	// Generate OTP and expiry time
+	const otp = Math.random()
+		.toString(36)
+		.substring(2, 8)
+		.toUpperCase(); // 6-character OTP
+	const otpExpiry = Date.now() + 10 * 60 * 1000; // OTP valid for 10 minutes
+
+	// Save OTP in database
+	await OTP.findOneAndUpdate(
+		{ email },
+		{ otp, otpExpiry },
+		{ upsert: true, new: true }
+	);
+
+	// Send OTP via email
+	const subject = "EMAIL verification - OTP Verification";
+	const validty = `This OTP is valid for 10 minutes.`;
+	await sendOTPs(email, subject, otp, validty)
+
+	res.status(200).json(
+		new ApiResponse(200, {}, "OTP sent to your email successfully")
+	);
+});
+
 //verify OTP
-const verifyOtp = asyncHandler(async (req, res) => {
+const verifyOtp = asyncHandler(async (req, res, next) => {
 	const { email, otp } = req.body;
 
 	if (!email || !otp) {
-		throw new ApiError(400, "Email and OTP are required");
+		return next(new ApiError(400, "Email and OTP are required"));
+
 	}
 
 	const otpRecord = await OTP.findOne({ email });
@@ -85,7 +178,8 @@ const verifyOtp = asyncHandler(async (req, res) => {
 		otpRecord.otp !== otp ||
 		otpRecord.otpExpiry < Date.now()
 	) {
-		throw new ApiError(400, "Invalid or expired OTP");
+		return next(new ApiError(400, "Invalid or expired OTP"));
+
 	}
 
 	await OTP.deleteOne({ email }); // Prevent OTP reuse
@@ -96,94 +190,118 @@ const verifyOtp = asyncHandler(async (req, res) => {
 		);
 });
 
-const registerUser = asyncHandler(async (req, res) => {
-	const {
-		fullName,
-		email,
-		username,
-		password,
-		phoneNo,
-		DOB,
-	} = req.body;
-	//console.log("email: ", email);
 
-	//todo: validation - not empty
-	if (
-		[fullName, email, username, password].some(
-			(field) => field?.trim() === ""
-		)
-	) {
-		throw new ApiError(400, "All fields are required");
-	}
+const registerUser = asyncHandler(async (req, res, next) => {
+	let session;
+	try {
+		// Initialize session
+		session = await mongoose.startSession();
+		session.startTransaction();
+		const { fullName, email, password, phoneNo, otp, addressLine,
+			pincode,
+			coordinates, } = req.body;
 
-	//todo:  check if user already exists: username, email
-	const existedUser = await User.findOne({
-		$or: [{ username }, { email }],
-	});
+		if ([fullName, email, password].some((field) => field?.trim() === "")) {
+			return next(new ApiError(400, "All fields are required"));
 
-	if (existedUser) {
-		throw new ApiError(
-			409,
-			"User with email or username already exists"
+		}
+
+		if (!phoneNo) {
+			return next(new ApiError(400, "phoneNo is required"));
+
+		}
+
+		// Validate OTP before proceeding with registration
+		const otpRecord = await OTP.findOne({ email });
+		if (!otpRecord) {
+			return next(new ApiError(400, "OTP has not been sent to this email"));
+
+		}
+
+		// Verify OTP expiration and correctness
+		if (otpRecord.otp !== otp || otpRecord.otpExpiry < Date.now()) {
+			return next(new ApiError(400, "Invalid or expired OTP"));
+
+		}
+
+		// After OTP verification, delete OTP from DB (security measure)
+		await OTP.deleteOne({ email });
+
+		// Check if the user already exists
+		const existedUser = await User.findOne({ email: email });
+		if (existedUser) {
+			return next(new ApiError(409, "User with email already exists"));
+
+		}
+
+
+		// Call postal API to fetch city, state, and country from the pincode
+		let { city, state, country } = await AddressFromPincode(pincode);
+
+		let parsedCoordinates = parseCoordinates(coordinates);
+
+		// Proceed with user registration
+		const user = await User.create(
+			[
+				{
+					fullName,
+					email,
+					password,
+					phoneNo,
+				}
+			],
+			{ session });
+
+		// Create the seller address entry within the transaction
+		const newAddress = await Address.create(
+			[
+				{
+					sellerId: newSeller[0]._id,
+					addressLine,
+					city,
+					state,
+					country,
+					postalCode: pincode,
+					coordinates: { type: "Point", coordinates: parsedCoordinates },
+				},
+			],
+			{ session }
+		);
+
+
+		// Commit the transaction
+		await session.commitTransaction();
+		session.endSession();
+
+		// Remove sensitive fields (password, refresh token) before sending response
+		const createdUser = await User.findById(user[0]._id);
+
+		// Check if user creation was successful
+		if (!createdUser) {
+			return next(new ApiError(500, "Something went wrong while registering the user"));
+
+		}
+
+		const { accessToken, refreshToken } =
+			await generateAccessAndRefereshTokens(createdUser._id);
+
+		await sendFollowUp(createdUser);
+
+		// Send success response
+		return res.status(201).json(
+			new ApiResponse(200, { createdUser, accessToken, refreshToken }, "User registered successfully")
+		);
+	} catch (error) {
+		if (session) {
+			await session.abortTransaction();
+			session.endSession();
+			console.log("error in abort")
+		}
+		console.error("Error during transaction: ", error);
+		return next(
+			new ApiError(500, "Something went wrong while registering the User")
 		);
 	}
-	//console.log(req.files);
-
-	//todo: check for images, check for avatar
-	console.log("req.files", req.file.path);
-
-	const avatarLocalPath = req.file.path;
-	console.log("avatarLocalPath", avatarLocalPath);
-
-	//todo:  upload them to cloudinary, avatar
-	const avatar = await uploadOnCloudinary(avatarLocalPath);
-
-	// if (!avatar) {
-	// 	throw new ApiError(400, "Avatar file is required");
-	// }
-
-	// Check for previous verification
-	const otpRecord = await OTP.findOne({ email });
-	if (otpRecord) {
-		throw new ApiError(400, "Email not verified");
-	}
-
-	//todo: create user object - create entry in db
-	const user = await User.create({
-		fullName,
-		avatar: avatar?.url || "",
-		email,
-		password,
-		username: username.toLowerCase(),
-		phoneNo,
-		DOB,
-	});
-
-	//todo: remove password and refresh token field from response
-	const createdUser = await User.findById(user._id).select(
-		"-password -refreshToken"
-	);
-
-	//todo: check for user creation
-	if (!createdUser) {
-		throw new ApiError(
-			500,
-			"Something went wrong while registering the user"
-		);
-	}
-
-	await sendFollowUp(createdUser);
-
-	//todo: send response
-	return res
-		.status(201)
-		.json(
-			new ApiResponse(
-				200,
-				createdUser,
-				"User registered Successfully"
-			)
-		);
 });
 
 const loginUser = asyncHandler(async (req, res) => {
@@ -364,26 +482,26 @@ const changeCurrentPassword = asyncHandler(
 );
 
 const getCurrentUser = asyncHandler(async (req, res) => {
-    // Fetch user details from the database (assuming user is already attached to req.user)
-    const user = await Customer.findById(req.user.id).exec();
-    
-    if (!user) {
-        return res.status(404).json(new ApiResponse(404, null, 'User not found'));
-    }
+	// Fetch user details from the database (assuming user is already attached to req.user)
+	const user = await Customer.findById(req.user.id).exec();
 
-    // Fetch the address associated with the user from the Address schema
-    const address = await Address.findOne({ user: req.user.id,role:'Customer', isDefault: true }).exec();
+	if (!user) {
+		return res.status(404).json(new ApiResponse(404, null, 'User not found'));
+	}
 
-    // Clone the user object to safely add the address
-    const userWithAddress = user.toObject(); // Convert the Mongoose document to a plain JavaScript object
+	// Fetch the address associated with the user from the Address schema
+	const address = await Address.findOne({ user: req.user.id, role: 'Customer', isDefault: true }).exec();
 
-    // Attach the address to the cloned object
-    userWithAddress.address = address; // Add the address field to the user object
+	// Clone the user object to safely add the address
+	const userWithAddress = user.toObject(); // Convert the Mongoose document to a plain JavaScript object
 
-    // Return the updated user object with the address
-    return res.status(200).json(
-        new ApiResponse(200, userWithAddress, "User fetched successfully")
-    );
+	// Attach the address to the cloned object
+	userWithAddress.address = address; // Add the address field to the user object
+
+	// Return the updated user object with the address
+	return res.status(200).json(
+		new ApiResponse(200, userWithAddress, "User fetched successfully")
+	);
 });
 
 
@@ -457,200 +575,121 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 		);
 });
 
-const updateUserCoverImage = asyncHandler(
-	async (req, res) => {
-		const coverImageLocalPath = req.file?.path;
+const submitWasteReport = async (req, res) => {
+	try {
+		const { wasteType, weight, location } = req.body;
+		const residentId = req.user._id;
 
-		if (!coverImageLocalPath) {
-			throw new ApiError(
+		// Validate waste type
+		const validTypes = ["organic", "plastic", "paper", "metal", "e-waste", "other"];
+		if (!validTypes.includes(wasteType)) {
+			return res.status(400).json({ error: "Invalid waste type" });
+		}
+
+		//todo: check for images, check for Product images
+		// Check if files were uploaded
+		if (!req.files || req.files.length === 0) {
+			return next(new ApiError(
 				400,
-				"Cover image file is missing"
-			);
+				"At least one image is required."
+			));
 		}
 
-		//TODO: delete old image - assignment
-		// If there is an old avatar, delete it from Cloudinary
-		// Get the current artisan's details from the database
-		const customer = await Customer.findById(req.user._id);
-		if (customer.avatar) {
-			const cloudinaryId = customer.avatar
-				.split("/")
-				.pop()
-				.split(".")[0]; // Extract Cloudinary public ID
-			await deleteImageFromCloudinary(cloudinaryId); // Delete the old image from Cloudinary
-		}
+		//todo: Upload images
+		// Extract local file paths
+		const localFilePaths = req.files.map((file) => file.path);
 
-		const coverImage = await uploadOnCloudinary(
-			coverImageLocalPath
+		// Log file paths for debugging purposes
+		// Upload files to Cloudinary
+		const uploadedImages = await MultiUploadOnCloudinary(
+			localFilePaths,
+			'product'
 		);
 
-		if (!coverImage.url) {
-			throw new ApiError(
-				400,
-				"Error while uploading on avatar"
-			);
+		// If no images were successfully uploaded, return an error
+		if (uploadedImages.length === 0) {
+			return next(new ApiError(
+				500,
+				"Failed to upload images to Cloudinary."
+			))
 		}
 
-		const user = await User.findByIdAndUpdate(
-			req.user?._id,
-			{
-				$set: {
-					coverImage: coverImage.url,
-				},
-			},
-			{ new: true }
-		).select("-password");
+		// Create report
+		const newReport = await WasteReport.create({
+			user: residentId,
+			wasteType,
+			weight,
+			location,
+			images: uploadedImages,
+			status: "pending"
+		});
 
-		return res
-			.status(200)
-			.json(
-				new ApiResponse(
-					200,
-					user,
-					"Cover image updated successfully"
-				)
-			);
+		// Update resident's reports list
+		await Resident.findByIdAndUpdate(
+			residentId,
+			{ $push: { wasteReported: newReport._id } }
+		);
+
+		res.status(201).json(new ApiResponse(201, newReport, "Report submitted successfully"));
+
+	} catch (error) {
+		res.status(500).json({ error: "Failed to submit report: " + error.message });
 	}
-);
+};
 
-const getUserChannelProfile = asyncHandler(
-	async (req, res) => {
-		const { username } = req.params;
+// ==================== Dashboard Stats ====================
+const getResidentDashboard = async (req, res) => {
+	try {
+		const residentId = req.user._id;
 
-		if (!username?.trim()) {
-			throw new ApiError(400, "username is missing");
-		}
-
-		const channel = await User.aggregate([
+		// Aggregate stats
+		const stats = await WasteReport.aggregate([
+			{ $match: { user: residentId, status: "approved" } },
 			{
-				$match: {
-					username: username?.toLowerCase(),
-				},
-			},
-			{
-				$lookup: {
-					from: "subscriptions",
-					localField: "_id",
-					foreignField: "channel",
-					as: "subscribers",
-				},
-			},
-			{
-				$lookup: {
-					from: "subscriptions",
-					localField: "_id",
-					foreignField: "subscriber",
-					as: "subscribedTo",
-				},
-			},
-			{
-				$addFields: {
-					subscribersCount: {
-						$size: "$subscribers",
-					},
-					channelsSubscribedToCount: {
-						$size: "$subscribedTo",
-					},
-					isSubscribed: {
-						$cond: {
-							if: {
-								$in: [
-									req.user?._id,
-									"$subscribers.subscriber",
-								],
-							},
-							then: true,
-							else: false,
-						},
-					},
-				},
-			},
-			{
-				$project: {
-					fullName: 1,
-					username: 1,
-					subscribersCount: 1,
-					channelsSubscribedToCount: 1,
-					isSubscribed: 1,
-					avatar: 1,
-					coverImage: 1,
-					email: 1,
-				},
-			},
+				$group: {
+					_id: null,
+					totalWaste: { $sum: "$weight" },
+					totalPoints: { $sum: "$pointsEarned" },
+					byType: { $push: { type: "$wasteType", weight: "$weight" } }
+				}
+			}
 		]);
 
-		if (!channel?.length) {
-			throw new ApiError(404, "channel does not exists");
-		}
+		// Calculate CO2 savings (example formula: 1kg plastic = 3kg CO2 saved)
+		const co2Saved = stats[0]?.byType.reduce((acc, item) => {
+			const multipliers = { plastic: 3, paper: 1, metal: 5, organic: 2 };
+			return acc + (item.weight * (multipliers[item.type] || 1));
+		}, 0) || 0;
 
-		return res
-			.status(200)
-			.json(
-				new ApiResponse(
-					200,
-					channel[0],
-					"User channel fetched successfully"
-				)
-			);
+		res.status(200).json(new ApiResponse(200, {
+			totalWaste: stats[0]?.totalWaste || 0,
+			totalPoints: stats[0]?.totalPoints || 0,
+			co2Saved,
+			wasteDistribution: stats[0]?.byType || []
+		}, "Dashboard stats loaded successfully"));
+
+	} catch (error) {
+		res.status(500).json({ error: "Failed to load dashboard: " + error.message });
 	}
-);
+};
 
-// const getWatchHistory = asyncHandler(async(req, res) => {
-//     const user = await User.aggregate([
-//         {
-//             $match: {
-//                 _id: new mongoose.Types.ObjectId(req.user._id)
-//             }
-//         },
-//         {
-//             $lookup: {
-//                 from: "videos",
-//                 localField: "watchHistory",
-//                 foreignField: "_id",
-//                 as: "watchHistory",
-//                 pipeline: [
-//                     {
-//                         $lookup: {
-//                             from: "users",
-//                             localField: "owner",
-//                             foreignField: "_id",
-//                             as: "owner",
-//                             pipeline: [
-//                                 {
-//                                     $project: {
-//                                         fullName: 1,
-//                                         username: 1,
-//                                         avatar: 1
-//                                     }
-//                                 }
-//                             ]
-//                         }
-//                     },
-//                     {
-//                         $addFields:{
-//                             owner:{
-//                                 $first: "$owner"
-//                             }
-//                         }
-//                     }
-//                 ]
-//             }
-//         }
-//     ])
+// ==================== Waste History ====================
+const getWasteHistory = async (req, res) => {
+	try {
+		const reports = await WasteReport.find({ user: req.user._id })
+			.sort({ createdAt: -1 })
+			.select("wasteType images weight status pointsEarned createdAt");
 
-//     return res
-//     .status(200)
-//     .json(
-//         new ApiResponse(
-//             200,
-//             user[0].watchHistory,
-//             "Watch history fetched successfully"
-//         )
-//     )
-// })
+		res.status(200).json(new ApiResponse(200, reports, "Waste history loaded successfully"));
+	} catch (error) {
+		res.status(500).json({ error: "Failed to get history: " + error.message });
+	}
+};
+
 
 export {
-	sendOtp,
+	send_registrer_Otp,
+	sendForgotPasswordOTP,
 	verifyOtp,
 	registerUser,
 	loginUser,
@@ -660,6 +699,9 @@ export {
 	getCurrentUser,
 	updateAccountDetails,
 	updateUserAvatar,
-	updateUserCoverImage,
-	getUserChannelProfile,
+
+	submitWasteReport,
+	getResidentDashboard,
+	getWasteHistory,
+
 };

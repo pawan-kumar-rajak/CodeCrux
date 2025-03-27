@@ -49,7 +49,7 @@ const send_registrer_Otp = asyncHandler(async (req, res, next) => {
 
 	}
 
-	const existedUser = await Customer.findOne({ email });
+	const existedUser = await User.findOne({ email });
 	if (existedUser) {
 		throw new ApiError(409, 'User already existed ');
 	}
@@ -197,93 +197,69 @@ const registerUser = asyncHandler(async (req, res, next) => {
 		// Initialize session
 		session = await mongoose.startSession();
 		session.startTransaction();
-		const { fullName, email, password, phoneNo, otp, addressLine,
-			pincode,
-			coordinates, } = req.body;
 
-		if ([fullName, email, password].some((field) => field?.trim() === "")) {
+		// Extract fields from request body
+		const { fullName, email, password, phoneNo, otp, addressLine, pincode, coordinates } = req.body;
+
+		// Input validation
+		if (!fullName || !email || !password || !phoneNo || !addressLine || !pincode || !coordinates) {
 			return next(new ApiError(400, "All fields are required"));
-
 		}
-
-		if (!phoneNo) {
-			return next(new ApiError(400, "phoneNo is required"));
-
-		}
-
-		// Validate OTP before proceeding with registration
-		const otpRecord = await OTP.findOne({ email });
-		if (!otpRecord) {
-			return next(new ApiError(400, "OTP has not been sent to this email"));
-
-		}
-
-		// Verify OTP expiration and correctness
-		if (otpRecord.otp !== otp || otpRecord.otpExpiry < Date.now()) {
-			return next(new ApiError(400, "Invalid or expired OTP"));
-
-		}
-
-		// After OTP verification, delete OTP from DB (security measure)
-		await OTP.deleteOne({ email });
 
 		// Check if the user already exists
 		const existedUser = await User.findOne({ email: email });
 		if (existedUser) {
 			return next(new ApiError(409, "User with email already exists"));
-
 		}
-
 
 		// Call postal API to fetch city, state, and country from the pincode
 		let { city, state, country } = await AddressFromPincode(pincode);
 
+		// Parse coordinates
 		let parsedCoordinates = parseCoordinates(coordinates);
 
 		// Proceed with user registration
 		const user = await User.create(
-			[
-				{
-					fullName,
-					email,
-					password,
-					phoneNo,
-				}
-			],
-			{ session });
-
-		// Create the seller address entry within the transaction
-		const newAddress = await Address.create(
-			[
-				{
-					sellerId: newSeller[0]._id,
-					addressLine,
-					city,
-					state,
-					country,
-					postalCode: pincode,
-					coordinates: { type: "Point", coordinates: parsedCoordinates },
-				},
-			],
+			[{
+				fullName,
+				email,
+				password,
+				phoneNo
+			}],
 			{ session }
 		);
 
+		// Create the address entry within the transaction
+		const newAddress = await Address.create(
+			[{
+				userId: user[0]._id,
+				addressLine,
+				city,
+				state,
+				country,
+				postalCode: pincode,
+				location: { type: "Point", coordinates: parsedCoordinates }
+			}],
+			{ session }
+		);
+
+		// Link address to the user
+		user[0].address = newAddress[0]._id;
+		await user[0].save({ session });
 
 		// Commit the transaction
 		await session.commitTransaction();
 		session.endSession();
 
-		// Remove sensitive fields (password, refresh token) before sending response
-		const createdUser = await User.findById(user[0]._id);
+		// Remove sensitive fields (password) before sending response
+		const createdUser = await User.findById(user[0]._id).populate('address');
 
 		// Check if user creation was successful
 		if (!createdUser) {
 			return next(new ApiError(500, "Something went wrong while registering the user"));
-
 		}
 
-		const { accessToken, refreshToken } =
-			await generateAccessAndRefereshTokens(createdUser._id);
+		const { accessToken, refreshToken } = await generateAccessAndRefereshTokens(createdUser._id);
 
 		await sendFollowUp(createdUser);
 
@@ -291,18 +267,17 @@ const registerUser = asyncHandler(async (req, res, next) => {
 		return res.status(201).json(
 			new ApiResponse(200, { createdUser, accessToken, refreshToken }, "User registered successfully")
 		);
+
 	} catch (error) {
 		if (session) {
 			await session.abortTransaction();
 			session.endSession();
-			console.log("error in abort")
 		}
 		console.error("Error during transaction: ", error);
-		return next(
-			new ApiError(500, "Something went wrong while registering the User")
-		);
+		return next(new ApiError(500, "Something went wrong while registering the User"));
 	}
 });
+
 
 const loginUser = asyncHandler(async (req, res) => {
 	// req body -> data
@@ -575,16 +550,19 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 		);
 });
 
-const submitWasteReport = async (req, res) => {
+
+
+// Report waste with photo
+const reportWaste = async (req, res, next) => {
 	try {
-		const { wasteType, weight, location } = req.body;
+		const {userReportedType, approximateWeight,assignedZone, coordinates } = req.body;
 		const residentId = req.user._id;
 
-		// Validate waste type
-		const validTypes = ["organic", "plastic", "paper", "metal", "e-waste", "other"];
-		if (!validTypes.includes(wasteType)) {
-			return res.status(400).json({ error: "Invalid waste type" });
-		}
+		// Mock ML processing (replace with actual ML integration)
+		// const mlIdentifiedType = ['plastic', 'paper', 'metal', 'glass', 'organic'][Math.floor(Math.random() * 5)];
+		const mlIdentifiedType = 'paper'
+
+		const status = userReportedType === mlIdentifiedType ? 'useful' : 'unidentified';
 
 		//todo: check for images, check for Product images
 		// Check if files were uploaded
@@ -603,7 +581,7 @@ const submitWasteReport = async (req, res) => {
 		// Upload files to Cloudinary
 		const uploadedImages = await MultiUploadOnCloudinary(
 			localFilePaths,
-			'product'
+			'Waste'
 		);
 
 		// If no images were successfully uploaded, return an error
@@ -614,77 +592,73 @@ const submitWasteReport = async (req, res) => {
 			))
 		}
 
-		// Create report
+		const parsedCoordinates = parseCoordinates(coordinates);
+
+
 		const newReport = await WasteReport.create({
-			user: residentId,
-			wasteType,
-			weight,
-			location,
-			images: uploadedImages,
-			status: "pending"
+			reportedBy: residentId,
+			photoUrl:uploadedImages,
+			userReportedType,
+			mlIdentifiedType,
+			approximateWeight,
+			coordinates: {
+				type: 'Point',
+				coordinates: parsedCoordinates
+			},
+			status,
+			assignedZone
 		});
 
-		// Update resident's reports list
-		await Resident.findByIdAndUpdate(
-			residentId,
-			{ $push: { wasteReported: newReport._id } }
-		);
+		// Update resident's wasteReports array
+		await Resident.findByIdAndUpdate(residentId, {
+			$push: { wasteReports: newReport._id }
+		});
 
-		res.status(201).json(new ApiResponse(201, newReport, "Report submitted successfully"));
+		res.status(201).json(new ApiResponse(201, newReport, 'Waste report submitted successfully'));
 
 	} catch (error) {
-		res.status(500).json({ error: "Failed to submit report: " + error.message });
+		console.log("error submitting waste report: ", error);
+		next(new ApiError(500, 'Error submitting waste report'));
 	}
 };
 
-// ==================== Dashboard Stats ====================
-const getResidentDashboard = async (req, res) => {
+
+// Get resident dashboard stats
+const getResidentDashboard = async (req, res, next) => {
 	try {
-		const residentId = req.user._id;
+		const resident = await Resident.findById(req.user._id)
+			.populate('wasteReports')
+			.populate('address');
 
-		// Aggregate stats
-		const stats = await WasteReport.aggregate([
-			{ $match: { user: residentId, status: "approved" } },
-			{
-				$group: {
-					_id: null,
-					totalWaste: { $sum: "$weight" },
-					totalPoints: { $sum: "$pointsEarned" },
-					byType: { $push: { type: "$wasteType", weight: "$weight" } }
-				}
-			}
-		]);
+		const totalReports = resident.wasteReports.length;
+		const totalRewards = resident.rewardCoins;
+		const pendingReports = resident.wasteReports.filter(report => report.status === 'pending').length;
 
-		// Calculate CO2 savings (example formula: 1kg plastic = 3kg CO2 saved)
-		const co2Saved = stats[0]?.byType.reduce((acc, item) => {
-			const multipliers = { plastic: 3, paper: 1, metal: 5, organic: 2 };
-			return acc + (item.weight * (multipliers[item.type] || 1));
-		}, 0) || 0;
+		const dashboardData = {
+			totalReports,
+			totalRewards,
+			pendingReports,
+			recentReports: resident.wasteReports.slice(0, 5)
+		};
 
-		res.status(200).json(new ApiResponse(200, {
-			totalWaste: stats[0]?.totalWaste || 0,
-			totalPoints: stats[0]?.totalPoints || 0,
-			co2Saved,
-			wasteDistribution: stats[0]?.byType || []
-		}, "Dashboard stats loaded successfully"));
-
+		res.status(200).json(new ApiResponse(200, dashboardData, 'Dashboard data fetched successfully'));
 	} catch (error) {
-		res.status(500).json({ error: "Failed to load dashboard: " + error.message });
+		next(new ApiError(500, 'Error fetching resident dashboard'));
 	}
 };
 
-// ==================== Waste History ====================
-const getWasteHistory = async (req, res) => {
+// Get all waste reports by resident
+const getMyWasteReports = async (req, res, next) => {
 	try {
-		const reports = await WasteReport.find({ user: req.user._id })
-			.sort({ createdAt: -1 })
-			.select("wasteType images weight status pointsEarned createdAt");
+		const reports = await WasteReport.find({ reportedBy: req.user._id })
+			.sort({ createdAt: -1 });
 
-		res.status(200).json(new ApiResponse(200, reports, "Waste history loaded successfully"));
+		res.status(200).json(new ApiResponse(200, reports, 'Waste reports fetched successfully'));
 	} catch (error) {
-		res.status(500).json({ error: "Failed to get history: " + error.message });
+		next(new ApiError(500, 'Error fetching waste reports'));
 	}
 };
+
 
 
 export {
@@ -700,8 +674,8 @@ export {
 	updateAccountDetails,
 	updateUserAvatar,
 
-	submitWasteReport,
+	reportWaste,
 	getResidentDashboard,
-	getWasteHistory,
+	getMyWasteReports,
 
 };

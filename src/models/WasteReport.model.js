@@ -1,38 +1,23 @@
 import { Schema,mongoose } from "mongoose";
 const wasteReportSchema = new Schema(
     {
-      user: {
-        type: Schema.Types.ObjectId,
-        ref: "Resident",
-        required: true,
+      reportedBy: { type: Schema.Types.ObjectId, ref: 'Resident', required: true },
+      photoUrl: { type: [String], required: true },
+      userReportedType: { type: String, enum: ['plastic', 'paper', 'metal', 'glass', 'organic'] },
+      mlIdentifiedType: { type: String, enum: ['plastic', 'paper', 'metal', 'glass', 'organic'] },
+      approximateWeight: Number,
+      coordinates: {
+        type: { type: String, enum: ['Point'], required: true },
+        coordinates: [Number]
       },
-      wasteType: {
-        type: String,
-        required: true,
-        enum: ["organic", "plastic", "paper", "metal", "e-waste", "other"],
-      },
-      weight: {
-        type: Number, // in kg
-        required: true,
-      },
-      images: {
-        type: [String], // Cloudinary URL
-      },
+      assignedZone: { type: String },
       status: {
         type: String,
-        default: "pending",
-        enum: ["pending", "approved", "rejected"],
+        enum: ['pending', 'useful', 'unidentified', 'admin_approved', 'collector_assigned'],
+        default: 'pending'
       },
-      location: {
-        type: String, // Or use GeoJSON for precise coordinates
-        required: true,
-      },
-      pointsEarned: {
-        type: Number,
-        default: 0, // Calculated based on wasteType and weight
-      },
-    },
-    { timestamps: true }
+      createdAt: { type: Date, default: Date.now }
+    }
   );
-  
+  wasteReportSchema.index({ coordinates: '2dsphere' });
   export const WasteReport = mongoose.model("WasteReport", wasteReportSchema);

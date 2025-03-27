@@ -4,7 +4,7 @@ import bcrypt from "bcrypt";
 
 const residentSchema = new Schema(
     {
-     
+   
         email: {
             type: String,
             required: true,
@@ -26,20 +26,9 @@ const residentSchema = new Schema(
             required: true,
             trim: true,
         },
-        address: {
-            type: Schema.Types.ObjectId,
-            ref: "Address",
-        },
-        points: {
-            type: Number,
-            default: 0, // Reward points for recycling
-        },
-        wasteReported: [
-            {
-                type: Schema.Types.ObjectId,
-                ref: "WasteReport",
-            },
-        ],
+        address: { type: Schema.Types.ObjectId, ref: 'Address' },
+        rewardCoins: { type: Number, default: 0 },
+        wasteReports: [{ type: Schema.Types.ObjectId, ref: 'WasteReport' }],
 
         password: {
             type: String,

@@ -3,11 +3,15 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 const adminSchema = new Schema(
     {
-      username: {
+      fullName: {
         type: String,
         required: true,
-        unique: true,
       },
+
+      avatar: {
+        type: String,
+      },
+
       email: {
         type: String,
         required: true,
@@ -17,10 +21,7 @@ const adminSchema = new Schema(
         type: String,
         required: true,
       },
-      role: {
-        type: String,
-        default: "admin",
-      },
+
       refreshToken: {
         type: String,
       },
@@ -46,8 +47,7 @@ const adminSchema = new Schema(
               {
                   _id: this._id,
                   email: this.email,
-                  username: this.username,
-                  role: "admin",
+                  role: "Admin",
               },
               process.env.ACCESS_TOKEN_SECRET,
               { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }

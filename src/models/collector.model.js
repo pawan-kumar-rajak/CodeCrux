@@ -32,11 +32,18 @@ const collectorSchema = new Schema(
       refreshToken: {
         type: String,
       },
+
+      currentLocation: {
+        type: { type: String, enum: ['Point'] },
+        coordinates: [Number]
+      },
+      assignedPickups: [{ type: Schema.Types.ObjectId, ref: 'WasteProcessingRequest' }]
     },
     { timestamps: true }
   );
 
-
+  collectorSchema.index({ currentLocation: '2dsphere' });
+  
   collectorSchema.pre("save", async function (next) {
     if (!this.isModified("password")) return next();
     this.password = await bcrypt.hash(this.password, 10);
@@ -55,10 +62,10 @@ collectorSchema.methods.generateAccessToken = function () {
             {
                 _id: this._id,
                 email: this.email,
-                username: this.username,
                 employeeId:this.employeeId,
                 fullName:this.fullName,
                 role: "collector",
+                assignedZone: this.assignedZone,
             },
             process.env.ACCESS_TOKEN_SECRET,
             { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }

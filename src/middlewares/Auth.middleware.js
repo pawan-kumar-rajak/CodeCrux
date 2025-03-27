@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { Resident } from "../models/resident.model.js";
 import { Admin } from "../models/admin.model.js";
 import {Collector} from "../models/collector.model.js";
+import { Vendor } from "../models/vendor.model.js";
 
 export const verifyJWT = asyncHandler(
 	async (req, _, next) => {
@@ -34,20 +35,20 @@ export const verifyJWT = asyncHandler(
 			let user,role;
 			
 			switch (decodedToken.role) {
-				case "artisan":{ // Seller / Artisan role
-					user = await Artisan.findById(
+				case "collector":{ // Seller / Artisan role
+					user = await Collector.findById(
 						decodedToken._id
 					).select("-password -refreshToken");
 
-					role = "Artisan"
+					role = "collector"
 					break;
 				}
-				case "customer":{ // Customer role
-					user = await Customer.findById(
+				case "resident":{ // Customer role
+					user = await Resident.findById(
 						decodedToken._id
 					).select("-password -refreshToken");
 
-					role = "Customer"
+					role = "resident"
 					break;
 				}
 				case "Admin":{
@@ -59,16 +60,16 @@ export const verifyJWT = asyncHandler(
 					break;
 
 				}
-
-				case "logisticAgent":{
-					user = await Agent.findById(
+				case "vendor":{
+					user = await Vendor.findById(
 						decodedToken._id
 					).select("-password -refreshToken");
-					role= "logisticAgent"
+					role= "vendor"
 					
 					break;
 
 				}
+
 				default:
 					throw new ApiError(401, "Invalid role in token");
 			}
@@ -128,7 +129,7 @@ export const verifyJWTtemp = asyncHandler(async (req, _, next) => {
 				);
 				role = "Admin";
 				break;
-			case "logisticAgent":
+			case "Vendor":
 				user = await Agent.findById(decodedToken._id).select(
 					"-password -refreshToken"
 				);

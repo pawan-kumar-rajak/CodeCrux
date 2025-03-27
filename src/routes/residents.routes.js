@@ -12,11 +12,11 @@ import {
 	updateAccountDetails,
 	updateUserAvatar,
 
-	submitWasteReport,
+	reportWaste,
 	getResidentDashboard,
-	getWasteHistory,
+getMyWasteReports
 } from "../controllers/residents.controller.js";
-import { upload } from "../middlewares/multer.middleware.js";
+import { MultiUpload, upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/Auth.middleware.js";
 
 const router = Router();
@@ -32,8 +32,8 @@ router.post("/change_current_password", verifyJWT, changeCurrentPassword);
 router.get("/current_user", verifyJWT, getCurrentUser);
 router.post("/update_account_details", verifyJWT, updateAccountDetails);
 router.post("/update_user_avatar", verifyJWT, upload.single("avatar"), updateUserAvatar);
-router.post("/submit_waste_report", verifyJWT, submitWasteReport);
+router.post("/submit_waste_report", verifyJWT,MultiUpload, reportWaste);
 router.get("/get_resident_dashboard", verifyJWT, getResidentDashboard);
-router.get("/get_waste_history", verifyJWT, getWasteHistory);
+router.get("/get_waste_history", verifyJWT, getMyWasteReports);
 	
 export default router;

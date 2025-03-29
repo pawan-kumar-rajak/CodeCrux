@@ -279,7 +279,7 @@ const registerUser = asyncHandler(async (req, res, next) => {
 });
 
 
-const loginUser = asyncHandler(async (req, res) => {
+const loginUser = asyncHandler(async (req, res,next) => {
 	// req body -> data
 	// username or email
 	//find the user
@@ -307,7 +307,7 @@ const loginUser = asyncHandler(async (req, res) => {
 	});
 
 	if (!user) {
-		throw new ApiError(404, "User does not exist");
+		return next( new ApiError(404, "User does not exist"))
 	}
 
 	const isPasswordValid = await user.isPasswordCorrect(
@@ -315,7 +315,7 @@ const loginUser = asyncHandler(async (req, res) => {
 	);
 
 	if (!isPasswordValid) {
-		throw new ApiError(401, "Invalid user credentials");
+		return next( new ApiError(401, "Invalid user credentials"))
 	}
 
 	const { accessToken, refreshToken } =
@@ -560,7 +560,8 @@ const reportWaste = async (req, res, next) => {
 
 		// Mock ML processing (replace with actual ML integration)
 		// const mlIdentifiedType = ['plastic', 'paper', 'metal', 'glass', 'organic'][Math.floor(Math.random() * 5)];
-		const mlIdentifiedType = 'paper'
+		// const mlIdentifiedType = 'paper'
+		const mlIdentifiedType = userReportedType; // For testing purposes, use the same type as user reported
 
 		const status = userReportedType === mlIdentifiedType ? 'useful' : 'unidentified';
 

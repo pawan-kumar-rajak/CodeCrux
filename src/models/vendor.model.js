@@ -8,7 +8,7 @@ const vendorSchema = new Schema({
     address: { type: String, required: true },
     requiredWasteTypes: { 
       type: [String], 
-      enum: ["plastic", "organic", "e-waste", "metal", "textile","paper","trash","other"],
+      enum:["E-waste", "automobile wastes", "battery waste", "glass waste", "light bulbs", "metal waste", "organic waste", "paper waste", "plastic waste"],
       required: true 
     },
     email: { type: String, required: true, unique: true },

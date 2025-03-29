@@ -31,103 +31,103 @@ const generateAccessAndRefereshTokens = async (userId) => {
 };
 
 const registerVendor = asyncHandler(async (req, res, next) => {
-	let session;
-	try {
-		// Start session for transaction handling
-		session = await mongoose.startSession();
-		session.startTransaction();
+    let session;
+    try {
+        // Start session for transaction handling
+        session = await mongoose.startSession();
+        session.startTransaction();
 
-		// Extract fields from the request body
-		const { 
-			companyName, 
-			licenseNo, 
-			address, 
-			requiredWasteTypes, 
-			email, 
-			password, 
-			processingMethod, 
-			avatar, 
-			energyProduced, 
-			co2Reduced, 
-			wasteProcessed, 
-			certifications, 
-			processingFacilityLocation 
-		} = req.body;
+        // Extract fields from the request body
+        const {
+            companyName,
+            licenseNo,
+            address,
+            requiredWasteTypes,
+            email,
+            password,
+            processingMethod,
+            avatar,
+            energyProduced,
+            co2Reduced,
+            wasteProcessed,
+            certifications,
+            processingFacilityLocation
+        } = req.body;
 
-		// Validate required fields
-		if (!companyName || !licenseNo || !address || !requiredWasteTypes || !email || !password || !processingFacilityLocation) {
-			return next(new ApiError(400, "All required fields must be provided"));
-		}
+        // Validate required fields
+        if (!companyName || !licenseNo || !address || !requiredWasteTypes || !email || !password || !processingFacilityLocation) {
+            return next(new ApiError(400, "All required fields must be provided"));
+        }
 
-		// Check if the vendor already exists by email or license number
-		const existingVendor = await Vendor.findOne({ $or: [{ email }, { licenseNo }] });
-		if (existingVendor) {
-			return next(new ApiError(409, "Vendor with this email or license number already exists"));
-		}
+        // Check if the vendor already exists by email or license number
+        const existingVendor = await Vendor.findOne({ $or: [{ email }, { licenseNo }] });
+        if (existingVendor) {
+            return next(new ApiError(409, "Vendor with this email or license number already exists"));
+        }
 
-		// Process coordinates for processing facility location
-		const parsedCoordinates = parseCoordinates(processingFacilityLocation.coordinates);
-		if (!parsedCoordinates) {
-			return next(new ApiError(400, "Invalid coordinates for processing facility"));
-		}
+        // Process coordinates for processing facility location
+        const parsedCoordinates = parseCoordinates(processingFacilityLocation.coordinates);
+        if (!parsedCoordinates) {
+            return next(new ApiError(400, "Invalid coordinates for processing facility"));
+        }
 
-		// Create a new vendor document
-		const vendor = await Vendor.create(
-			[{
-				companyName,
-				licenseNo,
-				address,
-				requiredWasteTypes,
-				email,
-				password,
-				processingMethod,
-				avatar: avatar || "https://cdn-icons-png.flaticon.com/512/3177/3177440.png", // default avatar
-				energyProduced: energyProduced || 0,
-				co2Reduced: co2Reduced || 0,
-				wasteProcessed: wasteProcessed || 0,
-				certifications: certifications || [],
-				processingFacilityLocation: { 
-					type: "Point", 
-					coordinates: parsedCoordinates 
-				}
-			}],
-			{ session }
-		);
+        // Create a new vendor document
+        const vendor = await Vendor.create(
+            [{
+                companyName,
+                licenseNo,
+                address,
+                requiredWasteTypes,
+                email,
+                password,
+                processingMethod,
+                avatar: avatar || "https://cdn-icons-png.flaticon.com/512/3177/3177440.png", // default avatar
+                energyProduced: energyProduced || 0,
+                co2Reduced: co2Reduced || 0,
+                wasteProcessed: wasteProcessed || 0,
+                certifications: certifications || [],
+                processingFacilityLocation: {
+                    type: "Point",
+                    coordinates: parsedCoordinates
+                }
+            }],
+            { session }
+        );
 
-		// Commit the transaction
-		await session.commitTransaction();
-		session.endSession();
+        // Commit the transaction
+        await session.commitTransaction();
+        session.endSession();
 
-		// Retrieve the created vendor to return with the response
-		const createdVendor = await Vendor.findById(vendor[0]._id);
+        // Retrieve the created vendor to return with the response
+        const createdVendor = await Vendor.findById(vendor[0]._id);
 
-		// Check if vendor creation was successful
-		if (!createdVendor) {
-			return next(new ApiError(500, "Something went wrong while registering the vendor"));
-		}
+        // Check if vendor creation was successful
+        if (!createdVendor) {
+            return next(new ApiError(500, "Something went wrong while registering the vendor"));
+        }
 
-		// Generate access and refresh tokens for the vendor (if needed)
-		const { accessToken, refreshToken } = await generateAccessAndRefereshTokens(createdVendor._id);
+        // Generate access and refresh tokens for the vendor (if needed)
+        const { accessToken, refreshToken } = await generateAccessAndRefereshTokens(createdVendor._id);
 
-		// Send success response
-		return res.status(201).json(
-			new ApiResponse(200, { createdVendor, accessToken, refreshToken }, "Vendor registered successfully")
-		);
+        // Send success response
+        return res.status(201).json(
+            new ApiResponse(200, { createdVendor, accessToken, refreshToken }, "Vendor registered successfully")
+        );
 
-	} catch (error) {
-		// If an error occurs, abort the transaction and end session
-		if (session) {
-			await session.abortTransaction();
-			session.endSession();
-		}
-		console.error("Error during transaction: ", error);
-		return next(new ApiError(500, "Something went wrong while registering the vendor"));
-	}
+    } catch (error) {
+        // If an error occurs, abort the transaction and end session
+        if (session) {
+            await session.abortTransaction();
+            session.endSession();
+        }
+        console.error("Error during transaction: ", error);
+        return next(new ApiError(500, "Something went wrong while registering the vendor"));
+    }
 });
 
 
 
-const loginUser = asyncHandler(async (req, res) => {
+const loginUser = asyncHandler(async (req, res, next) => {
     // req body -> data
     // username or email
     //find the user
@@ -150,7 +150,7 @@ const loginUser = asyncHandler(async (req, res) => {
         );
     }
 
-    const user = await User.findOne({ email});
+    const user = await User.findOne({ email });
 
     if (!user) {
         throw new ApiError(404, "Admin does not exist");
@@ -161,7 +161,7 @@ const loginUser = asyncHandler(async (req, res) => {
     );
 
     if (!isPasswordValid) {
-        throw new ApiError(401, "Invalid Admin credentials");
+        return next( new ApiError(401, "Invalid Vendor credentials"))
     }
 
     const { accessToken, refreshToken } =
@@ -279,7 +279,7 @@ const getAvailableWaste = async (req, res, next) => {
     try {
         // Get vendor with their processing facility location
         const vendor = await Vendor.findById(req.user._id);
-        
+
         if (!vendor || !vendor.processingFacilityLocation) {
             return next(new ApiError(404, 'Vendor or processing facility location not found'));
         }
@@ -313,7 +313,7 @@ const getAvailableWaste = async (req, res, next) => {
 const requestWasteCollection = async (req, res, next) => {
     try {
         const { reportId } = req.body;
-        
+
         // Check if report exists and is useful
         const report = await WasteReport.findById(reportId);
         if (!report || report.status !== 'useful') {
@@ -354,9 +354,9 @@ const requestWasteCollection = async (req, res, next) => {
 const getVendorDashboard = async (req, res, next) => {
     try {
         const vendor = await Vendor.findById(req.user._id);
-        
+
         const requests = await WasteProcessingRequest.find({ vendor: req.user._id });
-        
+
         const totalRequests = requests.length;
         const pendingRequests = requests.filter(r => r.status === 'pending_vendor').length;
         const completedRequests = requests.filter(r => r.status === 'completed').length;
@@ -381,7 +381,7 @@ const getVendorDashboard = async (req, res, next) => {
 const rejectWasteRequest = async (req, res, next) => {
     try {
         const { requestId } = req.body;
-        
+
         const request = await WasteProcessingRequest.findByIdAndUpdate(requestId, {
             status: 'rejected'
         }, { new: true });
@@ -401,7 +401,30 @@ const rejectWasteRequest = async (req, res, next) => {
     }
 };
 
-export{
+// view complete details of garbage
+const viewGarbageDetails = async (req, res, next) => {
+    try {
+        const { garbageId } = req.params;
+
+
+        let garbageDetails = await WasteProcessingRequest.findOne({ wasteReport: garbageId })
+            .populate('wasteReport', 'coordinates userReportedType assignedZone')
+            .populate('vendor', 'companyName processingFacilityLocation')
+            .populate('collector', 'fullName phoneNo')
+
+        if (!garbageDetails) {
+        garbageDetails = await WasteReport.findById(garbageId)
+                .populate('reportedBy', 'fullName phoneNo')
+        }
+        res.status(200).json(new ApiResponse(200, garbageDetails, 'Garbage details fetched successfully'));
+    } catch (error) {
+        console.error('Error in viewGarbageDetails:', error);
+        next(new ApiError(500, 'Error fetching garbage details'));
+    }
+};
+
+
+export {
     registerVendor,
     loginUser,
     logoutUser,
@@ -410,5 +433,6 @@ export{
     getAvailableWaste,
     requestWasteCollection,
     getVendorDashboard,
-    rejectWasteRequest
+    rejectWasteRequest,
+    viewGarbageDetails
 };

@@ -29,8 +29,8 @@ app.get("/resident/login", (req, res) => {
   res.sendFile(path.join(__dirname, "..", "public", "HTML", "login.html"));
 });
 // Middleware to serve HTML files
-app.get("/resident/signup", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "resident.signup.html"));
+app.get("/resident/dashboard", (req, res) => {
+  res.sendFile(path.join(__dirname, "..", "public", "HTML", "resident.dashboard.html"));
 });
 // Middleware to serve HTML files
 app.get("/resident/dashboard", (req, res) => {
@@ -51,6 +51,10 @@ app.get("/resident/faq", (req, res) => {
 // Middleware to serve HTML files
 app.get("/admin/dashboard", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin.dashboard.html"));
+});
+
+app.get("/vendor/dashboard", (req, res) => {
+  res.sendFile(path.join(__dirname, "..", "public", "HTML", "vendor.dashboard.html"));
 });
 // Middleware to serve HTML files
 

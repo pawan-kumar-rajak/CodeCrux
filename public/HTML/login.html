@@ -12,30 +12,41 @@
 
     <div class="login-container">
         <h2 class="login-title">Log In to CleanCity</h2>
-
+        
         <!-- Display Messages -->
         <div id="message-box"></div>
-
+    
         <form id="login-form" class="login-form">
+           
+    
             <div class="form-group">
                 <label for="email">Email</label>
                 <input type="email" id="email" required>
             </div>
-
+    
             <div class="form-group">
                 <label for="password">Password</label>
                 <input type="password" id="password" required>
             </div>
 
+            <div class="form-group">
+                <label for="user-type">I am a</label>
+                <select id="user-type" required>
+                    <option value="">Select user type</option>
+                    <option value="resident">Resident</option>
+                    <option value="vendor">Vendor</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+    
             <button type="submit" class="login-button">Login</button>
         </form>
-
+    
         <div class="login-footer">
             <a href="forgot-password.html" class="forgot-password">Forgot Password?</a>
             <p>Don't have an account? <a href="register.html" class="register-link">Register</a></p>
         </div>
     </div>
-
 </body>
 <script src="/public/JS/resident.connect.js"></script>
 </html>

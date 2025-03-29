@@ -65,16 +65,83 @@ document.head.appendChild(style);
 // Handle the form submission
 document.getElementById('login-form').addEventListener('submit', async (event) => {
     event.preventDefault();  // Prevent the default form submission
-
+    const userType = document.getElementById('user-type').value;
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
 
+    // Validate inputs
+    if (!userType || !email || !password) {
+        showSnackbar('Please fill in all fields', 'error');
+        return;
+    }
+
+    const loginForm = document.getElementById('login-form');
+   
+
     try {
-      const user = await loginUser(email, password);
-      console.log('Logged in user:', user);  // You can redirect or perform other actions here
+        // Show loading state
+        const loginButton = loginForm.querySelector('.login-button');
+        loginButton.disabled = true;
+        loginButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+
+        // Determine the correct API endpoint based on user type
+        let apiEndpoint;
+        switch(userType) {
+            case 'resident':
+                apiEndpoint = '/api/v1/residents/login';
+                break;
+            case 'vendor':
+                apiEndpoint = '/api/v1/vendor/login';
+                break;
+            case 'admin':
+                apiEndpoint = '/api/v1/admins/login';
+                break;
+            default:
+                throw new Error('Invalid user type');
+        }
+
+        const response = await fetch(`http://localhost:5000${apiEndpoint}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email, password }),
+            credentials: 'include' // Important for cookies
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Login failed');
+        }
+
+        // Login successful - redirect based on user type
+        showSnackbar('Login successful! Redirecting...', 'success');
+        
+        setTimeout(() => {
+            switch(userType) {
+                case 'resident':
+                    window.location.href = '/resident/dashboard';
+                    break;
+                case 'vendor':
+                    window.location.href = '/vendor/dashboard';
+                    break;
+                case 'admin':
+                    window.location.href = '/admin/dashboard';
+                    break;
+            }
+        }, 1500);
+
     } catch (error) {
-        showSnackbar(error, 'error');
-      console.log('Login failed:', error);
+        console.error('Login error:', error);
+        showSnackbar('Login failed. Please try again.', 'error');
+    } finally {
+        // Reset login button
+        const loginButton = loginForm.querySelector('.login-button');
+        if (loginButton) {
+            loginButton.disabled = false;
+            loginButton.textContent = 'Login';
+        }
     }
   });
 
@@ -99,43 +166,8 @@ function isLoggedIn() {
   return !!getCookie('accessToken');
 }
 
-// API Functions
-async function loginUser(email, password) {
-    try {
-      const response = await fetch(`${API_BASE}/residents/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-        credentials: 'include',
-      });
-  
-      const responseData = await response.json();
-  
-      if (response.ok) {
-        // If response is OK (200-299), handle successful login
-        setAuthCookies(responseData.data.accessToken, responseData.data.refreshToken);
-        showSnackbar(responseData.message);
-        return responseData.data.user;
-      } else if (response.status === 401) {
-        // Handle Unauthorized error (Invalid user credentials)
-        const errorMessage = responseData.message || 'Invalid user credentials';
-        showSnackbar(errorMessage, 'error');  // Display error message in snackbar
-        throw new Error(errorMessage);  // Throw error to be caught
-      } else {
-        // Handle other errors (e.g., server errors)
-        const errorMessage = responseData.message || 'Login failed. Please try again.';
-        showSnackbar(errorMessage, 'error');
-        throw new Error(errorMessage);
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-      showSnackbar('An error occurred during login.', 'error');  // Show generic error
-      throw error;
-    }
-  }
-  
+
+
 async function logoutUser() {
   clearAuthCookies();
   showSnackbar('Logged out successfully.');
@@ -184,7 +216,7 @@ async function getResidentDashboard() {
   }
 
   try {
-    const response = await fetch(`${API_BASE}/residents/get_resident_dashboard`, {
+    const response = await fetch(`${API_BASE}/residents/dashboard`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -207,49 +239,3 @@ async function getResidentDashboard() {
     throw error;
   }
 }
-
-// Example usage:
-/*
-// Login example
-async function handleLogin() {
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
-  
-  try {
-    const user = await loginUser(email, password);
-    console.log('Logged in user:', user);
-    // Redirect or update UI
-  } catch (error) {
-    console.error('Login failed:', error);
-  }
-}
-
-// Submit waste report example
-async function handleSubmitWaste() {
-  const reportData = {
-    userReportedType: 'plastic',
-    approximateWeight: 5,
-    assignedZone: 'North District',
-    coordinates: [79.3434, 23.42323]
-  };
-  
-  try {
-    const result = await submitWasteReport(reportData);
-    console.log('Waste report submitted:', result);
-    // Update UI
-  } catch (error) {
-    console.error('Submission failed:', error);
-  }
-}
-
-// Get dashboard data example
-async function loadDashboard() {
-  try {
-    const dashboardData = await getResidentDashboard();
-    console.log('Dashboard data:', dashboardData);
-    // Update UI with dashboard data
-  } catch (error) {
-    console.error('Failed to load dashboard:', error);
-  }
-}
-*/

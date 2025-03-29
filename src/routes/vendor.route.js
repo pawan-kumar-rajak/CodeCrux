@@ -8,7 +8,8 @@ import {
     getAvailableWaste,
     requestWasteCollection,
     getVendorDashboard,
-    rejectWasteRequest
+    rejectWasteRequest,
+    viewGarbageDetails
 } from "../controllers/vendor.controller.js";
 import { verifyJWT } from "../middlewares/Auth.middleware.js";
 
@@ -24,5 +25,5 @@ router.get("/get_available_waste", verifyJWT, getAvailableWaste);
 router.post("/request_waste_collection", verifyJWT, requestWasteCollection);
 router.get("/get_vendor_dashboard", verifyJWT, getVendorDashboard);
 router.post("/reject_waste_request", verifyJWT, rejectWasteRequest);
-
+router.get("/view_garbage_details/:garbageId", verifyJWT, viewGarbageDetails);
 export default router;

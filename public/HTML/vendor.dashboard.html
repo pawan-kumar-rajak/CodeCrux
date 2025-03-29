@@ -1,0 +1,63 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vendor Dashboard - Available Waste</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="vendor-styles.css">
+  <link rel="stylesheet" href="/public/CSS/vendor.dashboard.css">
+</head>
+<body>
+  <div class="vendor-dashboard">
+    <header class="dashboard-header">
+      <h1><i class="fas fa-trash-alt"></i> Available Waste Reports 
+        <button onclick="logoutUser()" id="logoutuser">Logout</button>
+    </h1>
+      <div class="header-actions">
+        <div class="filter-controls">
+          <select id="wasteTypeFilter">
+            <option value="all">All Types</option>
+            <option value="plastic">Plastic</option>
+            <option value="paper">Paper</option>
+            <option value="metal">Metal</option>
+            <option value="glass">Glass</option>
+            <option value="organic">Organic</option>
+          </select>
+          <button id="refreshBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="stats-bar">
+      <div class="stat-card">
+        <div class="stat-value" id="totalReports">1</div>
+        <div class="stat-label">Total Available</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="selectedCount">0</div>
+        <div class="stat-label">Selected Items</div>
+      </div>
+    </div>
+
+    <main class="waste-reports-container">
+      <div class="waste-reports-grid" id="reportsGrid">
+        <!-- Reports will be loaded here -->
+      </div>
+    </main>
+
+    <div class="action-bar">
+      <button id="selectAllBtn"><i class="fas fa-check-square"></i> Select All</button>
+      <button id="collectSelectedBtn" disabled><i class="fas fa-truck"></i> Collect Selected</button>
+    </div>
+  </div>
+
+  <script src="vendor-script.js"></script>
+</body>
+
+<script src="/public/JS/vendor.dashboard.js">
+ 
+</script>
+</html>

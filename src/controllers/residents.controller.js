@@ -18,6 +18,10 @@ import mongoose from "mongoose";
 import { parseCoordinates, AddressFromPincode } from "../utils/location_handling.js";
 import { Bin } from "../models/bin.model.js";
 import { WasteReport } from "../models/wasteReport.model.js";
+import fs from "fs";
+import path from "path";
+import axios from "axios";
+import FormData from "form-data";
 
 const generateAccessAndRefereshTokens = async (userId) => {
 	try {
@@ -279,7 +283,7 @@ const registerUser = asyncHandler(async (req, res, next) => {
 });
 
 
-const loginUser = asyncHandler(async (req, res,next) => {
+const loginUser = asyncHandler(async (req, res, next) => {
 	// req body -> data
 	// username or email
 	//find the user
@@ -307,7 +311,7 @@ const loginUser = asyncHandler(async (req, res,next) => {
 	});
 
 	if (!user) {
-		return next( new ApiError(404, "User does not exist"))
+		return next(new ApiError(404, "User does not exist"))
 	}
 
 	const isPasswordValid = await user.isPasswordCorrect(
@@ -315,7 +319,7 @@ const loginUser = asyncHandler(async (req, res,next) => {
 	);
 
 	if (!isPasswordValid) {
-		return next( new ApiError(401, "Invalid user credentials"))
+		return next(new ApiError(401, "Invalid user credentials"))
 	}
 
 	const { accessToken, refreshToken } =
@@ -552,76 +556,116 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 
 
 
-// Report waste with photo
 const reportWaste = async (req, res, next) => {
-	try {
-		const {userReportedType, approximateWeight,assignedZone, coordinates } = req.body;
-		const residentId = req.user._id;
+    try {
+        const { userReportedType, approximateWeight, assignedZone, longitude, latitude } = req.body;
+        const residentId = req.user._id;
+        const coordinates = [longitude, latitude];
 
-		// Mock ML processing (replace with actual ML integration)
-		// const mlIdentifiedType = ['plastic', 'paper', 'metal', 'glass', 'organic'][Math.floor(Math.random() * 5)];
-		// const mlIdentifiedType = 'paper'
-		const mlIdentifiedType = userReportedType; // For testing purposes, use the same type as user reported
+        // Validate files were uploaded
+        if (!req.files || req.files.length === 0) {
+            return next(new ApiError(400, "At least one image is required."));
+        }
 
-		const status = userReportedType === mlIdentifiedType ? 'useful' : 'unidentified';
+      
+      
+        // 2. Now process with ML API using the original file
+        let mlIdentifiedType = userReportedType;
+        let detectedWasteTypes = [];
+        let isRecyclable = false;
 
-		//todo: check for images, check for Product images
-		// Check if files were uploaded
-		if (!req.files || req.files.length === 0) {
-			return next(new ApiError(
-				400,
-				"At least one image is required."
-			));
-		}
+        try {
+            // Use the first file that's still available in memory
+            const file = req.files[0];
 
-		//todo: Upload images
-		// Extract local file paths
-		const localFilePaths = req.files.map((file) => file.path);
+			console.log("files", req.files);
+            
+            // Verify file exists before processing
+            if (!fs.existsSync(file.path)) {
+                console.warn(`File not found: ${file.path}`);
+                return next(new Error('Temporary file not available for ML processing'))
+            }
 
-		// Log file paths for debugging purposes
-		// Upload files to Cloudinary
+            const form = new FormData();
+            form.append('image', fs.createReadStream(file.path));
+
+            const detectionResponse = await axios.post('http://172.22.103.58:5000/detect', form, {
+                headers: form.getHeaders(),
+                timeout: 5000 // 5 second timeout
+            });
+
+            if (detectionResponse.data.success) {
+                detectedWasteTypes = detectionResponse.data.detected_waste;
+                isRecyclable = detectionResponse.data.recyclable;
+
+                // Find best matching type
+                const normalizedUserType = userReportedType.toLowerCase();
+                mlIdentifiedType = detectedWasteTypes.find(type => 
+                    type.toLowerCase().includes(normalizedUserType)
+                ) || detectedWasteTypes[0] || userReportedType;
+            }
+        } catch (mlError) {
+            console.error('ML Processing Error:', mlError.message);
+			
+            // Continue with user-reported type if ML fails
+        }
+
 		const uploadedImages = await MultiUploadOnCloudinary(
-			localFilePaths,
-			'Waste'
-		);
+            req.files.map((file) => file.path),
+            'Waste'
+        );
 
-		// If no images were successfully uploaded, return an error
-		if (uploadedImages.length === 0) {
-			return next(new ApiError(
-				500,
-				"Failed to upload images to Cloudinary."
-			))
-		}
-
-		const parsedCoordinates = parseCoordinates(coordinates);
+        if (uploadedImages.length === 0) {
+            return next(new ApiError(500, "Failed to upload images to Cloudinary."));
+        }
 
 
-		const newReport = await WasteReport.create({
-			reportedBy: residentId,
-			photoUrl:uploadedImages,
-			userReportedType,
-			mlIdentifiedType,
-			approximateWeight,
-			coordinates: {
-				type: 'Point',
-				coordinates: parsedCoordinates
-			},
-			status,
-			assignedZone
-		});
+        // Create the report
+        const newReport = await WasteReport.create({
+            reportedBy: residentId,
+            photoUrl: uploadedImages,
+            userReportedType,
+            mlIdentifiedType,
+            approximateWeight,
+            coordinates: {
+                type: 'Point',
+                coordinates: parseCoordinates(coordinates)
+            },
+            status: detectedWasteTypes.some(t => 
+                t.toLowerCase().includes(userReportedType.toLowerCase())
+            ) ? 'useful' : 'unidentified',
+            assignedZone,
+            mlDetails: {
+                detectedWasteTypes,
+                isRecyclable,
+                detectionSuccess: detectedWasteTypes.length > 0
+            }
+        });
 
-		// Update resident's wasteReports array
-		await Resident.findByIdAndUpdate(residentId, {
-			$push: { wasteReports: newReport._id }
-		});
+        // Update resident
+        await Resident.findByIdAndUpdate(residentId, {
+            $push: { wasteReports: newReport._id }
+        });
 
-		res.status(201).json(new ApiResponse(201, newReport, 'Waste report submitted successfully'));
+        // Cleanup: Delete temporary files
+        req.files.forEach(file => {
+            try {
+                if (fs.existsSync(file.path)) {
+                    fs.unlinkSync(file.path);
+                }
+            } catch (cleanupError) {
+                console.error('Error cleaning up file:', file.path, cleanupError);
+            }
+        });
 
-	} catch (error) {
-		console.log("error submitting waste report: ", error);
-		next(new ApiError(500, 'Error submitting waste report'));
-	}
+        res.status(201).json(new ApiResponse(201, newReport, 'Report submitted'));
+
+    } catch (error) {
+        console.error("Report Error:", error);
+        next(new ApiError(500, error.message || 'Report submission failed'));
+    }
 };
+
 
 
 // Get resident dashboard stats
@@ -629,7 +673,7 @@ const getResidentDashboard = async (req, res, next) => {
 	try {
 		const resident = await Resident.findById(req.user._id)
 			.populate('wasteReports')
-			.populate('address');
+			.populate('address').sort({createdAt: -1});
 
 		const totalReports = resident.wasteReports.length;
 		const totalRewards = resident.rewardCoins;
@@ -639,7 +683,7 @@ const getResidentDashboard = async (req, res, next) => {
 			totalReports,
 			totalRewards,
 			pendingReports,
-			recentReports: resident.wasteReports.slice(0, 5)
+			recentReports: resident.wasteReports.slice(0, 25)
 		};
 
 		res.status(200).json(new ApiResponse(200, dashboardData, 'Dashboard data fetched successfully'));

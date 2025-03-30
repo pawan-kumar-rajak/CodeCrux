@@ -133,12 +133,10 @@ document.addEventListener('DOMContentLoaded', function () {
     if (selectedReports.length === 0) return;
 
     // In real implementation, this would call your API:
-    fetch('http://localhost:5000/api/v1/vendor/request_waste_collection', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + localStorage.getItem('token')
-      },
+    fetch('http://localhost:5000/api/v1/vendor/request_waste_collection',  {
+                    credentials: 'include',
+                    method:'POST',
+                
       body: JSON.stringify({ reportIds: selectedReports })
     })
       .then(response => response.json())

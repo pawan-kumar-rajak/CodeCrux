@@ -314,6 +314,8 @@ const requestWasteCollection = async (req, res, next) => {
     try {
         let { reportIds } = req.body;
 
+        
+
         // If reportIds is a string (e.g., "[232,231]", "312312,42321"), try to parse it into an array
         if (typeof reportIds === 'string') {
             try {

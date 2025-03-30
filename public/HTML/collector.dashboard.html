@@ -853,7 +853,8 @@
             function updateDashboard(data) {
                 document.getElementById('totalAssigned').textContent = data.totalAssigned;
                 document.getElementById('pendingPickups').textContent = data.pendingPickups;
-                document.getElementById('completedPickups').textContent = data.completedPickups;
+                // document.getElementById('completedPickups').textContent = data.completedPickups;
+                document.getElementById('completedPickups').textContent = 1;
             }
 
             // Update pickups table
@@ -1266,23 +1267,23 @@
 
             statusMessage.style.display = 'none';
 
-            // switch (currentStatus) {
-            //     case 'pending':
-            //         collectedBtn.disabled = false;
-            //         deliveredBtn.disabled = true;
-            //         break;
-            //     case 'collected':
-            //         collectedBtn.disabled = true;
-            //         deliveredBtn.disabled = false;
-            //         break;
-            //     case 'completed':
-            //         collectedBtn.disabled = true;
-            //         deliveredBtn.disabled = true;
-            //         break;
-            //     default:
-            //         collectedBtn.disabled = true;
-            //         deliveredBtn.disabled = true;
-            // }
+            switch (currentStatus) {
+                // case 'pending':
+                //     collectedBtn.disabled = false;
+                //     deliveredBtn.disabled = true;
+                //     break;
+                // case 'collected':
+                //     collectedBtn.disabled = true;
+                //     deliveredBtn.disabled = false;
+                //     break;
+                case 'completed':
+                    collectedBtn.disabled = true;
+                    deliveredBtn.disabled = true;
+                    break;
+                // default:
+                //     collectedBtn.disabled = true;
+                    // deliveredBtn.disabled = true;
+            }
         }
 
         // Update waste status
@@ -1376,7 +1377,7 @@
         // Navigation functions
         function navigateToPickup() {
             if (!currentWasteDetails) return;
-            const [lng, lat] = currentWasteDetails.location.coordinates;
+            const [lng, lat] = currentWasteDetails.wasteReport.location.coordinates;
             window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`, '_blank');
         }
 

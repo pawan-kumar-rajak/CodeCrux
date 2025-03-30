@@ -1091,7 +1091,7 @@
                 const respond = await response.json();
                 currentWasteDetails = respond.data
                 console.log("current waste: ", currentWasteDetails)
-             
+
 
                 // For demo, we'll use mock data
                 // currentWasteDetails = {
@@ -1154,8 +1154,8 @@
             // Basic waste info
             document.getElementById('detail-waste-id').textContent = waste._id;
             document.getElementById('detail-waste-type').textContent =
-                `${waste.wasteReport.mlIdentifiedType} (Reported as: ${waste.wasteReport.userReported})`;
-            document.getElementById('detail-waste-weight').textContent = `${waste.wasteReport.approximateWeight} kg`;
+                `${waste.wasteReport.wasteType.mlIdentified} (Reported as: ${waste.wasteReport.wasteType.userReported})`;
+            document.getElementById('detail-waste-weight').textContent = `${waste.wasteReport.weight} kg`;
 
             // Status
             const statusElement = document.getElementById('detail-waste-status');
@@ -1167,18 +1167,18 @@
                 new Date(waste.wasteReport.createdAt).toLocaleString();
 
             // Resident info
-            document.getElementById('detail-resident-name').textContent = waste.resident.fullName;
-            document.getElementById('detail-resident-contact').textContent = waste.resident.phoneNo;
+            document.getElementById('detail-resident-name').textContent = waste.resident.name;
+            document.getElementById('detail-resident-contact').textContent = waste.resident.contact;
             // document.getElementById('detail-resident-address').textContent = waste.resident.address;
 
             // Location info
             document.getElementById('detail-pickup-location').textContent =
                 `(${waste.wasteReport.location.coordinates[1].toFixed(4)}, ${waste.wasteReport.location.coordinates[0].toFixed(4)})`;
             document.getElementById('detail-dropoff-location').textContent =
-                `${waste.currentProcessing.companyName} (${waste.currentProcessing.vendor.processingFacilityLocation[1].toFixed(4)}, ${waste.currentProcessing.vendor.processingFacilityLocation[0].toFixed(4)})`;
+                `${waste.currentProcessing.vendor.companyName} (${waste.currentProcessing.vendor.processingFacilityLocation[1].toFixed(4)}, ${waste.currentProcessing.vendor.processingFacilityLocation[0].toFixed(4)})`;
 
             // Update status buttons
-            updateStatusButtons(waste.status);
+            updateStatusButtons(waste.wasteReport.status);
 
             // Processing history
             updateProcessingHistory(waste.processingHistory);
@@ -1192,7 +1192,7 @@
 
             // Convert coordinates from [lng, lat] to [lat, lng]
             const pickupCoords = [
-                wastewasteReport.location.coordinates[1],
+                waste.wasteReport.location.coordinates[1],
                 waste.wasteReport.location.coordinates[0]
             ];
 
@@ -1231,7 +1231,7 @@
                     iconSize: [25, 25]
                 })
             })
-                .bindPopup(waste.vendor.companyName)
+                .bindPopup(waste.currentProcessing.companyName)
                 .addTo(detailsMap);
 
             // Draw route
@@ -1266,23 +1266,23 @@
 
             statusMessage.style.display = 'none';
 
-            switch (currentStatus) {
-                case 'pending':
-                    collectedBtn.disabled = false;
-                    deliveredBtn.disabled = true;
-                    break;
-                case 'collected':
-                    collectedBtn.disabled = true;
-                    deliveredBtn.disabled = false;
-                    break;
-                case 'completed':
-                    collectedBtn.disabled = true;
-                    deliveredBtn.disabled = true;
-                    break;
-                default:
-                    collectedBtn.disabled = true;
-                    deliveredBtn.disabled = true;
-            }
+            // switch (currentStatus) {
+            //     case 'pending':
+            //         collectedBtn.disabled = false;
+            //         deliveredBtn.disabled = true;
+            //         break;
+            //     case 'collected':
+            //         collectedBtn.disabled = true;
+            //         deliveredBtn.disabled = false;
+            //         break;
+            //     case 'completed':
+            //         collectedBtn.disabled = true;
+            //         deliveredBtn.disabled = true;
+            //         break;
+            //     default:
+            //         collectedBtn.disabled = true;
+            //         deliveredBtn.disabled = true;
+            // }
         }
 
         // Update waste status
@@ -1290,15 +1290,38 @@
             if (!currentWasteDetails) return;
 
             try {
+                // Get current position first
+                const position = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject);
+                });
+
+                const longitude = position.coords.longitude;
+                const latitude = position.coords.latitude;
+
                 // In a real app, you would call your API here:
-                // const response = await fetch(`/api/v1/collector/mark_as_${newStatus}`, {
-                //     method: 'POST',
-                //     headers: { 'Content-Type': 'application/json' },
-                //     body: JSON.stringify({
-                //         requestId: currentWasteDetails._id,
-                //         currentLocation: [longitude, latitude] // From geolocation
-                //     })
-                // });
+               if (newStatus == 'collected') {
+                 const response = await fetch(`/api/v1/collector/mark_as_collected`, {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify({
+                         requestId: currentWasteDetails._id,
+                         currentLocation: [longitude, latitude] // From geolocation
+                     })
+                 });
+               }
+
+               if (newStatus == 'delivered') {
+                 const response = await fetch(`/api/v1/collector/mark_as_delivered`, {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify({
+                         requestId: currentWasteDetails._id,
+                         currentLocation: [longitude, latitude] // From geolocation
+                     })
+                 });
+               }
+
+
 
                 // For demo, we'll simulate the response
                 const statusMessage = document.getElementById('statusMessage');
@@ -1315,7 +1338,8 @@
                         status: 'collected',
                         collector: 'You',
                         vendor: currentWasteDetails.vendor.companyName,
-                        date: new Date().toISOString()
+                        date: new Date().toISOString(),
+                        location: [longitude, latitude] // Also store location in history
                     });
                 } else if (newStatus === 'delivered') {
                     statusMessage.textContent = 'Waste marked as delivered successfully! Reward: ₹150';
@@ -1328,7 +1352,8 @@
                         status: 'completed',
                         collector: 'You',
                         vendor: currentWasteDetails.vendor.companyName,
-                        date: new Date().toISOString()
+                        date: new Date().toISOString(),
+                        location: [longitude, latitude] // Also store location in history
                     });
                 }
 
@@ -1343,12 +1368,11 @@
             } catch (error) {
                 const statusMessage = document.getElementById('statusMessage');
                 statusMessage.style.display = 'block';
-                statusMessage.textContent = 'Error: ' + error.message;
+                statusMessage.textContent = 'Error: ' + (error.message || 'Failed to get location or update status');
                 statusMessage.style.backgroundColor = '#f8d7da';
                 statusMessage.style.color = '#721c24';
             }
         }
-
         // Navigation functions
         function navigateToPickup() {
             if (!currentWasteDetails) return;
@@ -1388,33 +1412,33 @@
         }
 
 
-        
-
-  function showSnackbar(message, type = 'success') {
-    const snackbar = document.createElement('div');
-    snackbar.classList.add('snackbar');
-    snackbar.classList.add(type);  // Add success or error type classes
-    snackbar.textContent = message;
-
-    // Append the snackbar to the body
-    document.body.appendChild(snackbar);
-
-    // Show the snackbar and then remove it after some time
-    setTimeout(() => {
-      snackbar.classList.add('show');
-    }, 100);
-
-    setTimeout(() => {
-      snackbar.classList.remove('show');
-      document.body.removeChild(snackbar);
-    }, 3000); // Remove after 3 seconds
-  }
 
 
+        function showSnackbar(message, type = 'success') {
+            const snackbar = document.createElement('div');
+            snackbar.classList.add('snackbar');
+            snackbar.classList.add(type);  // Add success or error type classes
+            snackbar.textContent = message;
 
-  // Add some basic styling for the snackbar
-  const style = document.createElement('style');
-  style.textContent = `
+            // Append the snackbar to the body
+            document.body.appendChild(snackbar);
+
+            // Show the snackbar and then remove it after some time
+            setTimeout(() => {
+                snackbar.classList.add('show');
+            }, 100);
+
+            setTimeout(() => {
+                snackbar.classList.remove('show');
+                document.body.removeChild(snackbar);
+            }, 3000); // Remove after 3 seconds
+        }
+
+
+
+        // Add some basic styling for the snackbar
+        const style = document.createElement('style');
+        style.textContent = `
 .snackbar {
   visibility: hidden;
   min-width: 250px;
@@ -1447,7 +1471,7 @@
   background-color: #F44336;
 }
 `;
-  document.head.appendChild(style);
+        document.head.appendChild(style);
 
 
     </script>

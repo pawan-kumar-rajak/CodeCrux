@@ -13,7 +13,7 @@ const wasteReportSchema = new Schema(
       assignedZone: { type: String },
       status: {
         type: String,
-        enum: ['pending', 'useful', 'unidentified', 'admin_approved', 'collector_assigned'],
+        enum: ['pending', 'useful', 'unidentified', 'admin_approved', 'collector_assigned', 'collected','delivered'],
         default: 'pending'
       },
       mlDetails: {

@@ -385,7 +385,7 @@ const getCollectorDashboard = async (req, res, next) => {
             totalAssigned,
             pendingPickups,
             completedPickups,
-            recentPickups: collector.assignedPickups.slice(0, 5)
+            recentPickups: collector.assignedPickups.slice(0, 15)
         };
 
         res.status(200).json(new ApiResponse(200, dashboardData, 'Dashboard data fetched successfully'));

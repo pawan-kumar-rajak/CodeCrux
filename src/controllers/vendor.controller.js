@@ -312,43 +312,53 @@ const getAvailableWaste = async (req, res, next) => {
 // Request waste collection
 const requestWasteCollection = async (req, res, next) => {
     try {
-        const { reportId } = req.body;
+        const { reportIds } = req.body;
 
-        // Check if report exists and is useful
-        const report = await WasteReport.findById(reportId);
-        if (!report || report.status !== 'useful') {
-            return next(new ApiError(400, 'Invalid waste report or not useful'));
+        if (!Array.isArray(reportIds) || reportIds.length === 0) {
+            return next(new ApiError(400, 'reportIds should be a non-empty array'));
         }
 
-        // Create processing request
-        const newRequest = await WasteProcessingRequest.create({
-            wasteReport: reportId,
-            vendor: req.user._id,
-            status: 'pending_vendor'
-        });
+        // Loop through each reportId and process the request
+        const newRequests = [];
+        for (const reportId of reportIds) {
+            // Check if the report exists and is useful
+            const report = await WasteReport.findById(reportId);
+            if (!report || report.status !== 'useful') {
+                return next(new ApiError(400, `Invalid waste report or not useful for reportId ${reportId}`));
+            }
 
-        // Assign to nearest collector (simplified)
-        // In real implementation, you would query collectors near the report location
-        const collector = await Collector.findOneAndUpdate(
-            { assignedZone: report.assignedZone },
-            { $push: { assignedPickups: newRequest._id } },
-            { new: true }
-        );
+            // Create processing request for each valid report
+            const newRequest = await WasteProcessingRequest.create({
+                wasteReport: reportId,
+                vendor: req.user._id,
+                status: 'pending_vendor'
+            });
 
-        if (!collector) {
-            return next(new ApiError(404, 'No collector available in this zone'));
+            // Assign to nearest collector (simplified)
+            const collector = await Collector.findOneAndUpdate(
+                { assignedZone: report.assignedZone },
+                { $push: { assignedPickups: newRequest._id } },
+                { new: true }
+            );
+
+            if (!collector) {
+                return next(new ApiError(404, `No collector available in this zone for reportId ${reportId}`));
+            }
+
+            // Update request with collector
+            await WasteProcessingRequest.findByIdAndUpdate(newRequest._id, {
+                collector: collector._id
+            });
+
+            newRequests.push(newRequest);
         }
 
-        // Update request with collector
-        await WasteProcessingRequest.findByIdAndUpdate(newRequest._id, {
-            collector: collector._id
-        });
-
-        res.status(201).json(new ApiResponse(201, newRequest, 'Waste collection requested successfully'));
+        res.status(201).json(new ApiResponse(201, newRequests, 'Waste collection requests successfully created'));
     } catch (error) {
         next(new ApiError(500, 'Error requesting waste collection'));
     }
 };
+
 
 // Get vendor dashboard stats
 const getVendorDashboard = async (req, res, next) => {

@@ -50,7 +50,7 @@ app.get("/resident/faq", (req, res) => {
 });
 // Middleware to serve HTML files
 app.get("/admin/dashboard", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "admin.dashboard.html"));
+  res.sendFile(path.join(__dirname, "..", "public", "HTML" ,"admin.dashboard.html"));
 });
 
 app.get("/vendor/dashboard", (req, res) => {

@@ -1,0 +1,196 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Approve Waste Report | CleanCity Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="/public/CSS/admin.approve.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1><i class="fas fa-check-circle"></i> Approve Waste Report</h1>
+      <button class="btn btn-outline">
+        <i class="fas fa-arrow-left"></i> Back to Reports
+      </button>
+    </header>
+
+    <div class="report-container">
+      <!-- Report Images Section -->
+      <div class="report-images">
+        <img src="https://imgs.search.brave.com/9dmtRYN3iokQgCvEp4vy9kcUXOAh4w3WoMrZLtv5u9g/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9tZWRp/YS5pc3RvY2twaG90/by5jb20vaWQvOTY1/NjQ1MjE0L3Bob3Rv/L3BsYXN0aWMtZ2Fy/YmFnZS1vbi10aGUt/cml2ZXItYmFuay5q/cGc_cz02MTJ4NjEy/Jnc9MCZrPTIwJmM9/Z25ySTJkbUl1Q3pD/NnRHT0E5aDVNNHpE/NjdpNUNtOUplSlAw/Wi1tZWhZRT0" 
+             alt="Waste report photo" 
+             class="main-image" 
+             id="mainImage">
+        
+        <div class="thumbnail-container">
+          <img src="https://imgs.search.brave.com/9dmtRYN3iokQgCvEp4vy9kcUXOAh4w3WoMrZLtv5u9g/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9tZWRp/YS5pc3RvY2twaG90/by5jb20vaWQvOTY1/NjQ1MjE0L3Bob3Rv/L3BsYXN0aWMtZ2Fy/YmFnZS1vbi10aGUt/cml2ZXItYmFuay5q/cGc_cz02MTJ4NjEy/Jnc9MCZrPTIwJmM9/Z25ySTJkbUl1Q3pD/NnRHT0E5aDVNNHpE/NjdpNUNtOUplSlAw/Wi1tZWhZRT0" 
+               alt="Thumbnail 1" 
+               class="thumbnail active"
+               onclick="changeMainImage(this)">
+        </div>
+      </div>
+
+      <!-- Report Details Section -->
+      <div class="report-details">
+        <div class="detail-section">
+          <h2>Report Information</h2>
+          <div class="detail-row">
+            <div class="detail-label">Report ID:</div>
+            <div class="detail-value">67e516bb34e30a6fcb6a60dd</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">Status:</div>
+            <div class="detail-value">
+              <span class="status-badge status-approved">admin_approved</span>
+            </div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">Reported On:</div>
+            <div class="detail-value">March 27, 2025 09:13 AM</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">User Type:</div>
+            <div class="detail-value">Plastic</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">ML Identified:</div>
+            <div class="detail-value">Plastic</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">Weight:</div>
+            <div class="detail-value">10 kg</div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h2>Location Details</h2>
+          <div class="detail-row">
+            <div class="detail-label">Coordinates:</div>
+            <div class="detail-value">23.42323, 79.3434</div>
+          </div>
+          <div class="map-container">
+            <i class="fas fa-map-marked-alt" style="font-size: 24px; margin-right: 10px;"></i>
+            Map view would be displayed here
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h2>Machine Learning Analysis</h2>
+          <div class="ml-details">
+            <div class="ml-detail">
+              <div class="ml-label">Detected Types:</div>
+              <div class="ml-value">None</div>
+            </div>
+            <div class="ml-detail">
+              <div class="ml-label">Detection Success:</div>
+              <div class="ml-value">No</div>
+            </div>
+            <div class="ml-detail">
+              <div class="ml-label">Recyclable:</div>
+              <div class="ml-value">
+                <span class="recyclable-tag recyclable-no">No</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-buttons">
+          <button class="btn btn-success" id="approveBtn" disabled>
+            <i class="fas fa-check"></i> Approved
+          </button>
+          <button class="btn btn-danger" id="rejectBtn">
+            <i class="fas fa-times"></i> Reject
+          </button>
+          <button class="btn btn-primary" id="assignBtn">
+            <i class="fas fa-truck"></i> Assign Collector
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Sample API response data
+    const reportData = {
+      "statusCode": 200,
+      "data": {
+        "coordinates": {
+          "type": "Point",
+          "coordinates": [79.3434, 23.42323]
+        },
+        "mlDetails": {
+          "detectedWasteTypes": []
+        },
+        "_id": "67e516bb34e30a6fcb6a60dd",
+        "reportedBy": "67e515627ce99684f6fb0665",
+        "photoUrl": [
+          "https://imgs.search.brave.com/9dmtRYN3iokQgCvEp4vy9kcUXOAh4w3WoMrZLtv5u9g/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9tZWRp/YS5pc3RvY2twaG90/by5jb20vaWQvOTY1/NjQ1MjE0L3Bob3Rv/L3BsYXN0aWMtZ2Fy/YmFnZS1vbi10aGUt/cml2ZXItYmFuay5q/cGc_cz02MTJ4NjEy/Jnc9MCZrPTIwJmM9/Z25ySTJkbUl1Q3pD/NnRHT0E5aDVNNHpE/NjdpNUNtOUplSlAw/Wi1tZWhZRT0"
+        ],
+        "userReportedType": "Plastic",
+        "mlIdentifiedType": "Plastic",
+        "approximateWeight": 10,
+        "status": "admin_approved",
+        "createdAt": "2025-03-27T09:13:31.481Z",
+        "__v": 0
+      },
+      "message": "Waste report approved successfully",
+      "success": true
+    };
+
+    // Function to change main image when thumbnail is clicked
+    function changeMainImage(thumbnail) {
+      const mainImage = document.getElementById('mainImage');
+      mainImage.src = thumbnail.src;
+      
+      // Update active thumbnail
+      document.querySelectorAll('.thumbnail').forEach(img => {
+        img.classList.remove('active');
+      });
+      thumbnail.classList.add('active');
+    }
+
+    // In a real implementation, you would:
+    // 1. Fetch the report data from your API
+    // 2. Handle the approve/reject actions with API calls
+    document.addEventListener('DOMContentLoaded', function() {
+      // Approve button click handler
+      document.getElementById('approveBtn').addEventListener('click', function() {
+        // This would call your API to approve the report
+        console.log('Approving report:', reportData.data._id);
+        // fetch(`/api/reports/${reportData.data._id}/approve`, { method: 'POST' })
+        //   .then(response => response.json())
+        //   .then(data => {
+        //     if (data.success) {
+        //       alert('Report approved successfully!');
+        //       window.location.href = '/admin/reports';
+        //     }
+        //   });
+      });
+
+      // Reject button click handler
+      document.getElementById('rejectBtn').addEventListener('click', function() {
+        // This would call your API to reject the report
+        console.log('Rejecting report:', reportData.data._id);
+        // fetch(`/api/reports/${reportData.data._id}/reject`, { method: 'POST' })
+        //   .then(response => response.json())
+        //   .then(data => {
+        //     if (data.success) {
+        //       alert('Report rejected successfully!');
+        //       window.location.href = '/admin/reports';
+        //     }
+        //   });
+      });
+
+      // Assign collector button click handler
+      document.getElementById('assignBtn').addEventListener('click', function() {
+        // This would open a modal or redirect to assign collector page
+        console.log('Assigning collector to report:', reportData.data._id);
+      });
+    });
+  </script>
+</body>
+</html>

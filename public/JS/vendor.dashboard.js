@@ -1,95 +1,64 @@
-document.addEventListener('DOMContentLoaded', function() {
-    // Mock data - replace with actual API call
-    const mockResponse = {
-      "statusCode": 200,
-      "data": [
-        {
-          "coordinates": {
-            "type": "Point",
-            "coordinates": [75.923173, 26.933167]
-          },
-          "_id": "67e7f7b35965c1f748b75e3e",
-          "reportedBy": {
-            "_id": "67e515627ce99684f6fb0665",
-            "fullName": "pawan Kumar",
-            "phoneNo": "934923982"
-          },
-          "photoUrl": [
-            "http://res.cloudinary.com/doqoexuer/image/upload/v1743255474/knbpxv7d2oxhehetym5h.jpg"
-          ],
-          "status": "useful",
-          "createdAt": "2025-03-29T13:37:55.012Z",
-          "__v": 0,
-          "mlIdentifiedType": "plastic",
-          "userReportedType": "plastic"
-        }
-      ],
-      "message": "Available waste reports fetched successfully",
-      "success": true
-    };
-  
-    // DOM elements
-    const reportsGrid = document.getElementById('reportsGrid');
-    const totalReportsEl = document.getElementById('totalReports');
-    const selectedCountEl = document.getElementById('selectedCount');
-    const selectAllBtn = document.getElementById('selectAllBtn');
-    const collectSelectedBtn = document.getElementById('collectSelectedBtn');
-    const wasteTypeFilter = document.getElementById('wasteTypeFilter');
-    const refreshBtn = document.getElementById('refreshBtn');
-  
-    let selectedReports = [];
-    let allReports = [];
-  
-    // Initialize dashboard
-    function initDashboard() {
-      fetchAvailableWaste();
-    }
-  
-    // Fetch available waste reports
-    function fetchAvailableWaste() {
+document.addEventListener('DOMContentLoaded', function () {
+
+  // DOM elements
+  const reportsGrid = document.getElementById('reportsGrid');
+  const totalReportsEl = document.getElementById('totalReports');
+  const selectedCountEl = document.getElementById('selectedCount');
+  const selectAllBtn = document.getElementById('selectAllBtn');
+  const collectSelectedBtn = document.getElementById('collectSelectedBtn');
+  const wasteTypeFilter = document.getElementById('wasteTypeFilter');
+  const refreshBtn = document.getElementById('refreshBtn');
+
+  let selectedReports = [];
+  let allReports = [];
+
+  // Initialize dashboard
+  function initDashboard() {
+    fetchAvailableWaste();
+  }
+
+  // Fetch available waste reports
+  function fetchAvailableWaste() {
     //   In real implementation, this would be an API call:
-      fetch('http://localhost:5000/api/v1/vendor/get_available_waste',)
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            allReports = data.data;
-            renderReports(allReports);
-          }
-        });
-      
-      // For demo, using mock data:
-    //   allReports = mockResponse.data;
-    //   renderReports(allReports);
+    fetch('http://localhost:5000/api/v1/vendor/get_available_waste',)
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          allReports = data.data;
+          renderReports(allReports);
+        }
+      });
+
+  }
+
+  // Render reports to the grid
+  function renderReports(reports) {
+    reportsGrid.innerHTML = '';
+    totalReportsEl.textContent = reports.length;
+    selectedReports = [];
+    updateSelectedCount();
+
+    if (reports.length === 0) {
+      reportsGrid.innerHTML = '<div class="no-reports">No waste reports available</div>';
+      return;
     }
-  
-    // Render reports to the grid
-    function renderReports(reports) {
-      reportsGrid.innerHTML = '';
-      totalReportsEl.textContent = reports.length;
-      selectedReports = [];
-      updateSelectedCount();
-  
-      if (reports.length === 0) {
-        reportsGrid.innerHTML = '<div class="no-reports">No waste reports available</div>';
-        return;
-      }
-  
-      reports.forEach(report => {
-        const reportCard = document.createElement('div');
-        reportCard.className = 'waste-report-card';
-        reportCard.dataset.id = report._id;
-        reportCard.dataset.type = report.userReportedType;
-  
-        const reportDate = new Date(report.createdAt);
-        const formattedDate = reportDate.toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-  
-        reportCard.innerHTML = `
+
+    reports.forEach(report => {
+      const reportCard = document.createElement('div');
+      reportCard.className = 'waste-report-card';
+      reportCard.dataset.id = report._id;
+      reportCard.dataset.type = report.userReportedType;
+
+      const reportDate = new Date(report.createdAt);
+      const formattedDate = reportDate.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      reportCard.innerHTML = `
           <input type="checkbox" class="select-checkbox" id="select-${report._id}">
           <img src="${report.photoUrl[0]}" alt="Waste photo" class="report-image" onclick="enlargeImage('${report.photoUrl[0]}')">
           <div class="report-details">
@@ -116,134 +85,196 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="report-date">Reported on ${formattedDate}</div>
           </div>
         `;
-  
-        const checkbox = reportCard.querySelector('.select-checkbox');
-        checkbox.addEventListener('change', function() {
-          if (this.checked) {
-            selectedReports.push(report._id);
-          } else {
-            selectedReports = selectedReports.filter(id => id !== report._id);
-          }
-          updateSelectedCount();
-        });
-  
-        reportsGrid.appendChild(reportCard);
+
+      const checkbox = reportCard.querySelector('.select-checkbox');
+      checkbox.addEventListener('change', function () {
+        if (this.checked) {
+          selectedReports.push(report._id);
+        } else {
+          selectedReports = selectedReports.filter(id => id !== report._id);
+        }
+        updateSelectedCount();
+      });
+
+      reportsGrid.appendChild(reportCard);
+    });
+  }
+
+  // Update selected count display
+  function updateSelectedCount() {
+    selectedCountEl.textContent = selectedReports.length;
+    collectSelectedBtn.disabled = selectedReports.length === 0;
+  }
+
+  // Select all reports
+  selectAllBtn.addEventListener('click', function () {
+    const checkboxes = document.querySelectorAll('.select-checkbox');
+    if (selectedReports.length === allReports.length) {
+      // Deselect all
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+      });
+      selectedReports = [];
+    } else {
+      // Select all
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = true;
+        const reportId = checkbox.id.replace('select-', '');
+        if (!selectedReports.includes(reportId)) {
+          selectedReports.push(reportId);
+        }
       });
     }
-  
-    // Update selected count display
-    function updateSelectedCount() {
-      selectedCountEl.textContent = selectedReports.length;
-      collectSelectedBtn.disabled = selectedReports.length === 0;
-    }
-  
-    // Select all reports
-    selectAllBtn.addEventListener('click', function() {
-      const checkboxes = document.querySelectorAll('.select-checkbox');
-      if (selectedReports.length === allReports.length) {
-        // Deselect all
-        checkboxes.forEach(checkbox => {
-          checkbox.checked = false;
-        });
-        selectedReports = [];
-      } else {
-        // Select all
-        checkboxes.forEach(checkbox => {
-          checkbox.checked = true;
-          const reportId = checkbox.id.replace('select-', '');
-          if (!selectedReports.includes(reportId)) {
-            selectedReports.push(reportId);
-          }
-        });
-      }
-      updateSelectedCount();
-    });
-  
-    // Collect selected reports
-    collectSelectedBtn.addEventListener('click', function() {
-      if (selectedReports.length === 0) return;
-      
-      // In real implementation, this would call your API:
-      // fetch('/api/vendor/collect_waste', {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'Authorization': 'Bearer ' + localStorage.getItem('token')
-      //   },
-      //   body: JSON.stringify({ reportIds: selectedReports })
-      // })
-      // .then(response => response.json())
-      // .then(data => {
-      //   if (data.success) {
-      //     alert('Selected waste marked as collected!');
-      //     fetchAvailableWaste();
-      //   }
-      // });
-      
-      alert(`Marking ${selectedReports.length} waste reports as collected...`);
-      // Simulate API call
-      setTimeout(() => {
-        fetchAvailableWaste();
-      }, 1000);
-    });
-  
-    // Filter by waste type
-    wasteTypeFilter.addEventListener('change', function() {
-      const type = this.value;
-      if (type === 'all') {
-        renderReports(allReports);
-      } else {
-        const filtered = allReports.filter(report => report.userReportedType === type);
-        renderReports(filtered);
-      }
-    });
-  
-    // Refresh button
-    refreshBtn.addEventListener('click', fetchAvailableWaste);
-  
-    // Initialize the dashboard
-    initDashboard();
+    updateSelectedCount();
+  });
+
+  // Collect selected reports
+  collectSelectedBtn.addEventListener('click', function () {
+    if (selectedReports.length === 0) return;
+
+    // In real implementation, this would call your API:
+    fetch('http://localhost:5000/api/v1/vendor/request_waste_collection', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + localStorage.getItem('token')
+      },
+      body: JSON.stringify({ reportIds: selectedReports })
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showSnackbar('Selected waste marked as collected!');
+          fetchAvailableWaste();
+        }
+      });
+
+    alert(`Marking ${selectedReports.length} waste reports as collected...`);
+    // Simulate API call
+    setTimeout(() => {
+      fetchAvailableWaste();
+    }, 1000);
   });
 
 
+  function showSnackbar(message, type = 'success') {
+    const snackbar = document.createElement('div');
+    snackbar.classList.add('snackbar');
+    snackbar.classList.add(type);  // Add success or error type classes
+    snackbar.textContent = message;
 
-  
+    // Append the snackbar to the body
+    document.body.appendChild(snackbar);
+
+    // Show the snackbar and then remove it after some time
+    setTimeout(() => {
+      snackbar.classList.add('show');
+    }, 100);
+
+    setTimeout(() => {
+      snackbar.classList.remove('show');
+      document.body.removeChild(snackbar);
+    }, 3000); // Remove after 3 seconds
+  }
+
+
+
+  // Add some basic styling for the snackbar
+  const style = document.createElement('style');
+  style.textContent = `
+.snackbar {
+  visibility: hidden;
+  min-width: 250px;
+  margin-left: -125px;
+  background-color: #333;
+  color: #fff;
+  text-align: center;
+  border-radius: 2px;
+  padding: 16px;
+  position: fixed;
+  z-index: 1;
+  left: 50%;
+  bottom: 30px;
+  font-size: 14px;
+  transition: all 0.5s;
+  opacity: 0;
+}
+
+.snackbar.show {
+  visibility: visible;
+  opacity: 1;
+  bottom: 50px;
+}
+
+.snackbar.success {
+  background-color: #4CAF50;
+}
+
+.snackbar.error {
+  background-color: #F44336;
+}
+`;
+  document.head.appendChild(style);
+
+
+
+  // Filter by waste type
+  wasteTypeFilter.addEventListener('change', function () {
+    const type = this.value;
+    if (type === 'all') {
+      renderReports(allReports);
+    } else {
+      const filtered = allReports.filter(report => report.userReportedType === type);
+      renderReports(filtered);
+    }
+  });
+
+  // Refresh button
+  refreshBtn.addEventListener('click', fetchAvailableWaste);
+
+  // Initialize the dashboard
+  initDashboard();
+});
+
+
+
+
 
 async function logoutUser() {
-    try {
-        await fetch(`http://localhost:5000/api/v1/vendor/logout`, {
-            method: 'POST',
-            credentials: 'include'
-        });
-        showLoginPage();
-    } catch (error) {
-        console.error('Logout failed:', error);
-    }
+  try {
+    await fetch(`http://localhost:5000/api/v1/vendor/logout`, {
+      method: 'POST',
+      credentials: 'include'
+    });
+    showLoginPage();
+  } catch (error) {
+    console.error('Logout failed:', error);
+  }
 }
 
 async function showLoginPage() {
-    window.location.href = '/resident/login'; // Redirect to login page
+  window.location.href = '/resident/login'; // Redirect to login page
 }
 
 
 function enlargeImage(src) {
-    const modal = document.createElement('div');
-    modal.style.position = 'fixed';
-    modal.style.top = '0';
-    modal.style.left = '0';
-    modal.style.width = '100%';
-    modal.style.height = '100%';
-    modal.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-    modal.style.display = 'flex';
-    modal.style.justifyContent = 'center';
-    modal.style.alignItems = 'center';
-    modal.style.zIndex = '1000';
-    modal.onclick = () => document.body.removeChild(modal);
+  const modal = document.createElement('div');
+  modal.style.position = 'fixed';
+  modal.style.top = '0';
+  modal.style.left = '0';
+  modal.style.width = '100%';
+  modal.style.height = '100%';
+  modal.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+  modal.style.display = 'flex';
+  modal.style.justifyContent = 'center';
+  modal.style.alignItems = 'center';
+  modal.style.zIndex = '1000';
+  modal.onclick = () => document.body.removeChild(modal);
 
-    const img = document.createElement('img');
-    img.src = src;
-    img.classList.add('enlarged-image');
+  const img = document.createElement('img');
+  img.src = src;
+  img.classList.add('enlarged-image');
 
-    modal.appendChild(img);
-    document.body.appendChild(modal);
+  modal.appendChild(img);
+  document.body.appendChild(modal);
 }

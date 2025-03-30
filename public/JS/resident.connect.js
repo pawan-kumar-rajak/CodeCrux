@@ -94,7 +94,7 @@ document.getElementById('login-form').addEventListener('submit', async (event) =
                 apiEndpoint = '/api/v1/vendor/login';
                 break;
             case 'admin':
-                apiEndpoint = '/api/v1/admins/login';
+                apiEndpoint = '/api/v1/admin/login';
                 break;
             default:
                 throw new Error('Invalid user type');

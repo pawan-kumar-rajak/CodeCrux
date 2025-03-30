@@ -16,6 +16,7 @@ import { Bin } from "../models/bin.model.js";
 import { WasteReport } from "../models/wasteReport.model.js";
 import { Resident } from "../models/resident.model.js";
 import { WasteProcessingRequest } from "../models/wasteProcessing.model.js";
+import { Collector } from "../models/collector.model.js";
 
 const generateAccessAndRefereshTokens = async (userId) => {
     try {
@@ -255,6 +256,20 @@ const refreshAccessToken = asyncHandler(
     }
 );
 
+
+const getAdminProfile = async (req, res, next) => {
+    try {
+        const admin = await Admin.findById(req.user._id).select('-password');
+        if (!admin) {
+            return next(new ApiError(404, 'Admin not found'));
+        }
+        
+        res.status(200).json(new ApiResponse(200, { user: admin }, 'Admin profile fetched'));
+    } catch (error) {
+        next(new ApiError(500, 'Error fetching admin profile'));
+    }
+};
+
 // Get all pending waste reports (unidentified)
 const getAllPendingWasteReports = async (req, res, next) => {
   try {
@@ -268,55 +283,83 @@ const getAllPendingWasteReports = async (req, res, next) => {
 };
 
 // Approve waste report as useful
+// Update the approve controller to include validation
 const approveWasteReport = async (req, res, next) => {
-  try {
-      const { reportId, wasteType } = req.body;
-      
-      const report = await WasteReport.findByIdAndUpdate(reportId, {
-          status: 'admin_approved',
-          userReportedType: wasteType,
-          mlIdentifiedType: wasteType
-      }, { new: true });
-
-      if (!report) {
-          return next(new ApiError(404, 'Report not found'));
-      }
-
-      res.status(200).json(new ApiResponse(200, report, 'Waste report approved successfully'));
-  } catch (error) {
-      next(new ApiError(500, 'Error approving waste report'));
-  }
-};
-
-// Reject waste report (assign to collector for landfill)
-const rejectWasteReport = async (req, res, next) => {
-  try {
-      const { reportId } = req.body;
-      
-      const report = await WasteReport.findByIdAndUpdate(reportId, {
-          status: 'collector_assigned'
-      }, { new: true });
-
-      if (!report) {
-          return next(new ApiError(404, 'Report not found'));
-      }
-
-      // Assign to nearest collector
-      const collector = await Collector.findOneAndUpdate(
-          { assignedZone: report.assignedZone },
-          { $push: { assignedPickups: report._id } },
-          { new: true }
-      );
-
-      if (!collector) {
-          return next(new ApiError(404, 'No collector available in this zone'));
-      }
-
-      res.status(200).json(new ApiResponse(200, { report, collector }, 'Waste report rejected and assigned to collector'));
-  } catch (error) {
-      next(new ApiError(500, 'Error rejecting waste report'));
-  }
-};
+    try {
+        const { reportId, wasteType } = req.body;
+        
+        // Validate waste type
+        const validTypes = ['plastic', 'paper', 'metal', 'glass', 'organic', 'E-waste', 'other'];
+        if (!validTypes.includes(wasteType)) {
+            return next(new ApiError(400, 'Invalid waste type'));
+        }
+        
+        const report = await WasteReport.findByIdAndUpdate(reportId, {
+            status: 'admin_approved',
+            userReportedType: wasteType,
+            mlIdentifiedType: wasteType
+        }, { new: true });
+  
+        if (!report) {
+            return next(new ApiError(404, 'Report not found'));
+        }
+  
+        // Add to approved waste collection
+        await CollectionCenter.findOneAndUpdate(
+            { zone: report.assignedZone },
+            { $push: { approvedWaste: report._id } }
+        );
+  
+        res.status(200).json(new ApiResponse(200, report, 'Waste report approved successfully'));
+    } catch (error) {
+        next(new ApiError(500, 'Error approving waste report'));
+    }
+  };
+  
+  // Update the reject controller to include notifications
+  const rejectWasteReport = async (req, res, next) => {
+    try {
+        const { reportId } = req.body;
+        
+        const report = await WasteReport.findByIdAndUpdate(reportId, {
+            status: 'collector_assigned'
+        }, { new: true });
+  
+        if (!report) {
+            return next(new ApiError(404, 'Report not found'));
+        }
+  
+        // Assign to nearest collector
+        const collector = await Collector.findOneAndUpdate(
+            { assignedZone: report.assignedZone },
+            { 
+                $push: { 
+                    assignedPickups: report._id,
+                    notifications: {
+                        type: 'new_assignment',
+                        message: `New landfill pickup assigned in ${report.assignedZone}`,
+                        reportId: report._id
+                    }
+                } 
+            },
+            { new: true }
+        );
+  
+        if (!collector) {
+            return next(new ApiError(404, 'No collector available in this zone'));
+        }
+  
+        // Send notification to collector (you would implement your notification system)
+        sendPushNotification(collector.fcmToken, {
+            title: 'New Landfill Assignment',
+            body: `You have been assigned a new pickup in ${report.assignedZone}`
+        });
+  
+        res.status(200).json(new ApiResponse(200, { report, collector }, 'Waste report rejected and assigned to collector'));
+    } catch (error) {
+        next(new ApiError(500, 'Error rejecting waste report'));
+    }
+  };
 
 // Get all expired requests (not accepted within 1 day)
 const getExpiredRequests = async (req, res, next) => {
@@ -376,21 +419,46 @@ const getAdminDashboard = async (req, res, next) => {
       const pendingReports = await WasteReport.countDocuments({ status: 'unidentified' });
       const totalRequests = await WasteProcessingRequest.countDocuments();
       const expiredRequests = await WasteProcessingRequest.countDocuments({ status: 'expired' });
+      const pendingApproval = await WasteReport.countDocuments({ status: 'unidentified' });
+    //   const activeCollectors = await Collector.countDocuments({ status: 'active' });
+      const activeCollectors = await Collector.countDocuments({ });
+      const registeredUsers = await Resident.countDocuments();
+      
 
       const dashboardData = {
           totalReports,
           pendingReports,
           totalRequests,
           expiredRequests,
+          pendingApproval,
+          activeCollectors,
+          registeredUsers,
           recentReports: await WasteReport.find().sort({ createdAt: -1 }).limit(5),
           recentRequests: await WasteProcessingRequest.find().sort({ createdAt: -1 }).limit(5)
       };
 
       res.status(200).json(new ApiResponse(200, dashboardData, 'Admin dashboard data fetched successfully'));
   } catch (error) {
+    console.log("error: ", error)
       next(new ApiError(500, 'Error fetching admin dashboard'));
   }
 };
+
+//get all collector details 
+const getCollectors = asyncHandler(async(req,res,next)=>{
+
+    const collectors = await Collector.find({});
+
+    res.status(200).json(new ApiResponse(200, collectors, 'collectors fetched success'));
+})
+
+const getCollectorDetails =  asyncHandler(async(req,res,next)=>{
+
+    const {collectorId} = req.params
+    const collectors = await Collector.findById(collectorId);
+
+    res.status(200).json(new ApiResponse(200, collectors, 'collectors fetched success'));
+})
 
 
 export{
@@ -398,10 +466,13 @@ export{
     loginUser,
     logoutUser,
     refreshAccessToken,
+    getAdminProfile,
     getAllPendingWasteReports,
     approveWasteReport,
     rejectWasteReport,
     getExpiredRequests,
     handleExpiredRequest,
-    getAdminDashboard
+    getAdminDashboard,
+    getCollectors,
+    getCollectorDetails
 }

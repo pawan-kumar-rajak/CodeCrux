@@ -1,0 +1,262 @@
+
+:root {
+    --primary: #2c3e50;
+    --primary-light: #e6f7ef;
+    --secondary: #3498db;
+    --danger: #e74c3c;
+    --warning: #f39c12;
+    --success: #27ae60;
+    --text-dark: #18232c;
+    --text-light: #6b7280;
+    --bg-light: #f8f9fa;
+    --border: #e5e7eb;
+    --white: #ffffff;
+    --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-light);
+    color: var(--text-dark);
+    line-height: 1.6;
+    padding: 20px;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .header h1 {
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .header h1 i {
+    color: var(--success);
+  }
+
+  .btn {
+    padding: 8px 16px;
+    border-radius: 5px;
+    border: none;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 14px;
+  }
+
+  .btn-primary {
+    background-color: var(--primary);
+    color: var(--white);
+  }
+
+  .btn-outline {
+    background-color: transparent;
+    border: 1px solid var(--border);
+  }
+
+  .btn-success {
+    background-color: var(--success);
+    color: var(--white);
+  }
+
+  .btn-danger {
+    background-color: var(--danger);
+    color: var(--white);
+  }
+
+  .report-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+  }
+
+  .report-images {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .main-image {
+    width: 100%;
+    height: 400px;
+    object-fit: cover;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+  }
+
+  .thumbnail-container {
+    display: flex;
+    gap: 10px;
+  }
+
+  .thumbnail {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 5px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.3s;
+  }
+
+  .thumbnail:hover, .thumbnail.active {
+    border-color: var(--primary);
+  }
+
+  .report-details {
+    background-color: var(--white);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: var(--shadow);
+  }
+
+  .detail-section {
+    margin-bottom: 20px;
+  }
+
+  .detail-section h2 {
+    font-size: 18px;
+    margin-bottom: 15px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .detail-row {
+    display: flex;
+    margin-bottom: 10px;
+  }
+
+  .detail-label {
+    width: 150px;
+    font-weight: 500;
+    color: var(--text-light);
+  }
+
+  .detail-value {
+    flex: 1;
+  }
+
+  .status-badge {
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: capitalize;
+    display: inline-block;
+  }
+
+  .status-pending {
+    background-color: #fff3cd;
+    color: #856404;
+  }
+
+  .status-approved {
+    background-color: #d4edda;
+    color: #155724;
+  }
+
+  .status-rejected {
+    background-color: #f8d7da;
+    color: #721c24;
+  }
+
+  .map-container {
+    height: 200px;
+    background-color: #eee;
+    border-radius: 8px;
+    margin-top: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-light);
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 30px;
+    justify-content: flex-end;
+  }
+
+  .ml-details {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 10px;
+  }
+
+  .ml-detail {
+    display: flex;
+    margin-bottom: 5px;
+  }
+
+  .ml-label {
+    width: 120px;
+    font-weight: 500;
+  }
+
+  .ml-value {
+    flex: 1;
+  }
+
+  .recyclable-tag {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .recyclable-yes {
+    background-color: var(--success);
+    color: white;
+  }
+
+  .recyclable-no {
+    background-color: var(--danger);
+    color: white;
+  }
+
+  @media (max-width: 768px) {
+    .report-container {
+      grid-template-columns: 1fr;
+    }
+    
+    .detail-row {
+      flex-direction: column;
+      gap: 5px;
+    }
+    
+    .detail-label {
+      width: 100%;
+    }
+    
+    .action-buttons {
+      flex-direction: column;
+    }
+    
+    .action-buttons .btn {
+      width: 100%;
+    }
+  }

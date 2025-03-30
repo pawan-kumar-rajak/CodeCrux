@@ -607,6 +607,7 @@ const reportWaste = async (req, res, next) => {
         } catch (mlError) {
             console.error('ML Processing Error:', mlError.message);
 			
+			
             // Continue with user-reported type if ML fails
         }
 

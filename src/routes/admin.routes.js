@@ -11,7 +11,10 @@ import {
     rejectWasteReport,
     getExpiredRequests,
     handleExpiredRequest,
-    getAdminDashboard
+    getAdminDashboard,
+    getAdminProfile,
+    getCollectors,
+    getCollectorDetails
 } from "../controllers/admin.controller.js";
 
 
@@ -24,8 +27,13 @@ router.post("/refresh_token", refreshAccessToken);
 router.get("/get_all_pending_waste_reports", verifyJWT, getAllPendingWasteReports);
 router.post("/approve_waste_report", verifyJWT, approveWasteReport);
 router.post("/reject_waste_report", verifyJWT, rejectWasteReport);
+router.get("/get_admin_dashboard", verifyJWT, getAdminDashboard);
+router.get("/me", verifyJWT, getAdminProfile);
 router.get("/get_expired_requests", verifyJWT, getExpiredRequests);
 router.post("/handle_expired_request", verifyJWT, handleExpiredRequest);
+router.get("/get_collectors", verifyJWT, getCollectors);
+router.get("/get_collector/:collectorId", verifyJWT, getCollectorDetails);
+
 
 
 export default router;

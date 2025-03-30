@@ -1,0 +1,461 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Expired Waste Reports | CleanCity Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="/public/CSS/admin.expired.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1><i class="fas fa-clock"></i> Expired Waste Reports</h1>
+      <button class="btn btn-outline">
+        <i class="fas fa-arrow-left"></i> Back to Dashboard
+      </button>
+    </header>
+
+    <div class="stats-bar">
+      <div class="stat-card">
+        <div class="stat-value">2</div>
+        <div class="stat-label">Total Expired Reports</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">26 kg</div>
+        <div class="stat-label">Total Waste Weight</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">1</div>
+        <div class="stat-label">Affected Vendors</div>
+      </div>
+    </div>
+
+    <div class="reports-container">
+      <div class="section-header">
+        <h2>Expired Collection Requests</h2>
+        <div>
+          <button class="btn btn-outline">
+            <i class="fas fa-download"></i> Export Data
+          </button>
+        </div>
+      </div>
+
+      <!-- Expired Report 1 -->
+      <div class="expired-report">
+        <div class="report-header">
+          <div class="report-id">Request ID: 67e51d33313b77814415de7c</div>
+          <div class="report-date">Expired on: March 27, 2025</div>
+        </div>
+
+        <div class="report-content">
+          <!-- Waste Details -->
+          <div class="waste-details">
+            <div class="detail-section">
+              <h3>Waste Information</h3>
+              <img src="https://imgs.search.brave.com/MxQipXyLWTBKQWpzq3L4-bbp1D-gvAfBxIamNaqB4uE/rs:fit:500:0:0:0/g:ce/aHR0cHM6Ly9saXJw/LmNkbi13ZWJzaXRl/LmNvbS81NjVlZDBk/OC9kbXMzcmVwL211/bHRpL29wdC9UaW4t/Um9vZmluZy0xOTIw/dy5wbmc" 
+                   class="waste-image">
+              <div class="detail-row">
+                <div class="detail-label">Report ID:</div>
+                <div class="detail-value">67e51c4f8df6017b99a2adbb</div>
+              </div>
+              <div class="detail-row">
+                <div class="detail-label">Type:</div>
+                <div class="detail-value">metal</div>
+              </div>
+              <div class="detail-row">
+                <div class="detail-label">Weight:</div>
+                <div class="detail-value">13 kg</div>
+              </div>
+              <div class="detail-row">
+                <div class="detail-label">Zone:</div>
+                <div class="detail-value">North District</div>
+              </div>
+              <div class="detail-row">
+                <div class="detail-label">Status:</div>
+                <div class="detail-value">
+                  <span class="status-badge status-expired">pending_vendor</span>
+                </div>
+              </div>
+              <div class="detail-row">
+                <div class="detail-label">Reported:</div>
+                <div class="detail-value">March 27, 2025 09:37 AM</div>
+              </div>
+            </div>
+
+            <div class="detail-section">
+              <h3>Location</h3>
+              <div class="detail-row">
+                <div class="detail-label">Coordinates:</div>
+                <div class="detail-value">23.42323, 79.3434</div>
+              </div>
+              <div class="map-placeholder">
+                <i class="fas fa-map-marked-alt" style="margin-right: 10px;"></i>
+                Map view would be displayed here
+              </div>
+            </div>
+          </div>
+
+          <!-- Vendor Details -->
+          <div class="vendor-details">
+            <div class="detail-section">
+              <h3>Assigned Vendor</h3>
+              <div class="detail-row">
+                <div class="detail-label">Company:</div>
+                <div class="detail-value">Eco Waste Solutions</div>
+              </div>
+              <div class="detail-row">
+                <div class="detail-label">License:</div>
+                <div class="detail-value">EW123456789</div>
+              </div>
+              <div class="detail-row">
+                <div class="detail-label">Address:</div>
+                <div class="detail-value">123 Green Ave, Eco City, EC 12345</div>
+              </div>
+              <div class="detail-row">
+                <div class="detail-label">Email:</div>
+                <div class="detail-value">contact@ecowaste.com</div>
+              </div>
+              <div class="detail-row">
+                <div class="detail-label">Method:</div>
+                <div class="detail-value">recycling</div>
+              </div>
+            </div>
+
+            <div class="detail-section">
+              <h3>Vendor Statistics</h3>
+              <div class="detail-row">
+                <div class="detail-label">Waste Processed:</div>
+                <div class="detail-value">2000 kg</div>
+              </div>
+              <div class="detail-row">
+                <div class="detail-label">Energy Produced:</div>
+                <div class="detail-value">1000 kWh</div>
+              </div>
+              <div class="detail-row">
+                <div class="detail-label">CO₂ Reduced:</div>
+                <div class="detail-value">500 kg</div>
+              </div>
+            </div>
+
+            <div class="detail-section">
+              <h3>Certifications</h3>
+              <div>
+                <span class="certification-badge">ISO 14001</span>
+                <span class="certification-badge">EPA Certified</span>
+              </div>
+            </div>
+
+            <div class="detail-section">
+              <h3>Facility Location</h3>
+              <div class="detail-row">
+                <div class="detail-label">Coordinates:</div>
+                <div class="detail-value">23.2315974, 79.712776</div>
+              </div>
+              <div class="map-placeholder">
+                <i class="fas fa-industry" style="margin-right: 10px;"></i>
+                Vendor facility location
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-buttons">
+          <button class="btn btn-danger">
+            <i class="fas fa-trash-alt"></i> Delete Request
+          </button>
+          <button class="btn btn-outline">
+            <i class="fas fa-redo"></i> Resend to Vendor
+          </button>
+          <button class="btn btn-outline">
+            <i class="fas fa-truck"></i> Assign New Vendor
+          </button>
+        </div>
+      </div>
+
+      <!-- Expired Report 2 -->
+      <div class="expired-report">
+        <div class="report-header">
+          <div class="report-id">Request ID: 67e51f509587fa493b4c047c</div>
+          <div class="report-date">Expired on: March 27, 2025</div>
+        </div>
+
+        <div class="report-content">
+          <!-- Waste Details -->
+          <div class="waste-details">
+            <div class="detail-section">
+              <h3>Waste Information</h3>
+              <img src="https://imgs.search.brave.com/MxQipXyLWTBKQWpzq3L4-bbp1D-gvAfBxIamNaqB4uE/rs:fit:500:0:0:0/g:ce/aHR0cHM6Ly9saXJw/LmNkbi13ZWJzaXRl/LmNvbS81NjVlZDBk/OC9kbXMzcmVwL211/bHRpL29wdC9UaW4t/Um9vZmluZy0xOTIw/dy5wbmc" 
+                   class="waste-image">
+              <div class="detail-row">
+                <div class="detail-label">Report ID:</div>
+                <div class="detail-value">67e51c4f8df6017b99a2adbb</div>
+              </div>
+              <div class="detail-row">
+                <div class="detail-label">Type:</div>
+                <div class="detail-value">metal</div>
+              </div>
+              <div class="detail-row">
+                <div class="detail-label">Weight:</div>
+                <div class="detail-value">13 kg</div>
+              </div>
+              <div class="detail-row">
+                <div class="detail-label">Zone:</div>
+                <div class="detail-value">North District</div>
+              </div>
+              <div class="detail-row">
+                <div class="detail-label">Status:</div>
+                <div class="detail-value">
+                  <span class="status-badge status-expired">pending_vendor</span>
+                </div>
+              </div>
+              <div class="detail-row">
+                <div class="detail-label">Reported:</div>
+                <div class="detail-value">March 27, 2025 09:37 AM</div>
+              </div>
+            </div>
+
+            <div class="detail-section">
+              <h3>Location</h3>
+              <div class="detail-row">
+                <div class="detail-label">Coordinates:</div>
+                <div class="detail-value">23.42323, 79.3434</div>
+              </div>
+              <div class="map-placeholder">
+                <i class="fas fa-map-marked-alt" style="margin-right: 10px;"></i>
+                Map view would be displayed here
+              </div>
+            </div>
+          </div>
+
+          <!-- Vendor Details -->
+          <div class="vendor-details">
+            <div class="detail-section">
+              <h3>Assigned Vendor</h3>
+              <div class="detail-row">
+                <div class="detail-label">Company:</div>
+                <div class="detail-value">Eco Waste Solutions</div>
+              </div>
+              <div class="detail-row">
+                <div class="detail-label">License:</div>
+                <div class="detail-value">EW123456789</div>
+              </div>
+              <div class="detail-row">
+                <div class="detail-label">Address:</div>
+                <div class="detail-value">123 Green Ave, Eco City, EC 12345</div>
+              </div>
+              <div class="detail-row">
+                <div class="detail-label">Email:</div>
+                <div class="detail-value">contact@ecowaste.com</div>
+              </div>
+              <div class="detail-row">
+                <div class="detail-label">Method:</div>
+                <div class="detail-value">recycling</div>
+              </div>
+            </div>
+
+            <div class="detail-section">
+              <h3>Vendor Statistics</h3>
+              <div class="detail-row">
+                <div class="detail-label">Waste Processed:</div>
+                <div class="detail-value">2000 kg</div>
+              </div>
+              <div class="detail-row">
+                <div class="detail-label">Energy Produced:</div>
+                <div class="detail-value">1000 kWh</div>
+              </div>
+              <div class="detail-row">
+                <div class="detail-label">CO₂ Reduced:</div>
+                <div class="detail-value">500 kg</div>
+              </div>
+            </div>
+
+            <div class="detail-section">
+              <h3>Certifications</h3>
+              <div>
+                <span class="certification-badge">ISO 14001</span>
+                <span class="certification-badge">EPA Certified</span>
+              </div>
+            </div>
+
+            <div class="detail-section">
+              <h3>Facility Location</h3>
+              <div class="detail-row">
+                <div class="detail-label">Coordinates:</div>
+                <div class="detail-value">23.2315974, 79.712776</div>
+              </div>
+              <div class="map-placeholder">
+                <i class="fas fa-industry" style="margin-right: 10px;"></i>
+                Vendor facility location
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-buttons">
+          <button class="btn btn-danger">
+            <i class="fas fa-trash-alt"></i> Delete Request
+          </button>
+          <button class="btn btn-outline">
+            <i class="fas fa-redo"></i> Resend to Vendor
+          </button>
+          <button class="btn btn-outline">
+            <i class="fas fa-truck"></i> Assign New Vendor
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Sample API response data
+    const expiredReportsData = {
+      "statusCode": 200,
+      "data": [
+        {
+          "_id": "67e51d33313b77814415de7c",
+          "wasteReport": {
+            "coordinates": {
+              "type": "Point",
+              "coordinates": [79.3434, 23.42323]
+            },
+            "mlDetails": {
+              "detectedWasteTypes": []
+            },
+            "_id": "67e51c4f8df6017b99a2adbb",
+            "reportedBy": "67e515627ce99684f6fb0665",
+            "photoUrl": [
+              "https://imgs.search.brave.com/MxQipXyLWTBKQWpzq3L4-bbp1D-gvAfBxIamNaqB4uE/rs:fit:500:0:0:0/g:ce/aHR0cHM6Ly9saXJw/LmNkbi13ZWJzaXRl/LmNvbS81NjVlZDBk/OC9kbXMzcmVwL211/bHRpL29wdC9UaW4t/Um9vZmluZy0xOTIw/dy5wbmc"
+            ],
+            "userReportedType": "metal",
+            "mlIdentifiedType": "metal",
+            "approximateWeight": 13,
+            "status": "collector_assigned",
+            "createdAt": "2025-03-27T09:37:19.105Z",
+            "__v": 0,
+            "assignedZone": "North District"
+          },
+          "vendor": {
+            "processingFacilityLocation": {
+              "type": "Point",
+              "coordinates": [79.712776, 23.2315974]
+            },
+            "_id": "67e51b1d08b896f5a737370d",
+            "companyName": "Eco Waste Solutions",
+            "licenseNo": "EW123456789",
+            "address": "123 Green Ave, Eco City, EC 12345",
+            "requiredWasteTypes": ["plastic", "organic", "metal"],
+            "email": "contact@ecowaste.com",
+            "processingMethod": "recycling",
+            "energyProduced": 1000,
+            "co2Reduced": 500,
+            "wasteProcessed": 2000,
+            "certifications": ["ISO 14001", "EPA Certified"],
+            "createdAt": "2025-03-27T09:32:13.084Z"
+          },
+          "status": "pending_vendor",
+          "createdAt": "2025-03-27T09:41:07.595Z",
+          "__v": 0
+        },
+        {
+          "_id": "67e51f509587fa493b4c047c",
+          "wasteReport": {
+            "coordinates": {
+              "type": "Point",
+              "coordinates": [79.3434, 23.42323]
+            },
+            "mlDetails": {
+              "detectedWasteTypes": []
+            },
+            "_id": "67e51c4f8df6017b99a2adbb",
+            "reportedBy": "67e515627ce99684f6fb0665",
+            "photoUrl": [
+              "https://imgs.search.brave.com/MxQipXyLWTBKQWpzq3L4-bbp1D-gvAfBxIamNaqB4uE/rs:fit:500:0:0:0/g:ce/aHR0cHM6Ly9saXJw/LmNkbi13ZWJzaXRl/LmNvbS81NjVlZDBk/OC9kbXMzcmVwL211/bHRpL29wdC9UaW4t/Um9vZmluZy0xOTIw/dy5wbmc"
+            ],
+            "userReportedType": "metal",
+            "mlIdentifiedType": "metal",
+            "approximateWeight": 13,
+            "status": "collector_assigned",
+            "createdAt": "2025-03-27T09:37:19.105Z",
+            "__v": 0,
+            "assignedZone": "North District"
+          },
+          "vendor": {
+            "processingFacilityLocation": {
+              "type": "Point",
+              "coordinates": [79.712776, 23.2315974]
+            },
+            "_id": "67e51b1d08b896f5a737370d",
+            "companyName": "Eco Waste Solutions",
+            "licenseNo": "EW123456789",
+            "address": "123 Green Ave, Eco City, EC 12345",
+            "requiredWasteTypes": ["plastic", "organic", "metal"],
+            "email": "contact@ecowaste.com",
+            "processingMethod": "recycling",
+            "energyProduced": 1000,
+            "co2Reduced": 500,
+            "wasteProcessed": 2000,
+            "certifications": ["ISO 14001", "EPA Certified"],
+            "createdAt": "2025-03-27T09:32:13.084Z"
+          },
+          "status": "pending_vendor",
+          "createdAt": "2025-03-27T09:50:08.304Z",
+          "__v": 0
+        }
+      ],
+      "message": "Expired requests fetched successfully",
+      "success": true
+    };
+
+    // In a real implementation, you would:
+    // 1. Fetch the expired reports from your API
+    // 2. Dynamically generate the report cards
+    document.addEventListener('DOMContentLoaded', function() {
+      // Delete button click handler
+      document.querySelectorAll('.btn-danger').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const reportId = this.closest('.expired-report').querySelector('.report-id').textContent.replace('Request ID: ', '');
+          if (confirm('Are you sure you want to delete this expired request?')) {
+            console.log('Deleting report:', reportId);
+            // fetch(`/api/reports/${reportId}`, { method: 'DELETE' })
+            //   .then(response => response.json())
+            //   .then(data => {
+            //     if (data.success) {
+            //       alert('Report deleted successfully!');
+            //       window.location.reload();
+            //     }
+            //   });
+          }
+        });
+      });
+
+      // Resend to vendor button click handler
+      document.querySelectorAll('.btn-outline:nth-of-type(1)').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const reportId = this.closest('.expired-report').querySelector('.report-id').textContent.replace('Request ID: ', '');
+          console.log('Resending to vendor:', reportId);
+          // fetch(`/api/reports/${reportId}/resend`, { method: 'POST' })
+          //   .then(response => response.json())
+          //   .then(data => {
+          //     if (data.success) {
+          //       alert('Request resent to vendor successfully!');
+          //       window.location.reload();
+          //     }
+          //   });
+        });
+      });
+
+      // Assign new vendor button click handler
+      document.querySelectorAll('.btn-outline:nth-of-type(2)').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const reportId = this.closest('.expired-report').querySelector('.report-id').textContent.replace('Request ID: ', '');
+          console.log('Assigning new vendor to:', reportId);
+          // This would typically open a modal to select a new vendor
+        });
+      });
+    });
+  </script>
+</body>
+</html>

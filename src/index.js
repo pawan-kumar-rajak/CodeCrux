@@ -56,6 +56,10 @@ app.get("/admin/dashboard", (req, res) => {
 app.get("/vendor/dashboard", (req, res) => {
   res.sendFile(path.join(__dirname, "..", "public", "HTML", "vendor.dashboard.html"));
 });
+
+app.get("/collector/dashboard", (req, res) => {
+  res.sendFile(path.join(__dirname, "..", "public", "HTML", "collector.dashboard.html"));
+});
 // Middleware to serve HTML files
 
 

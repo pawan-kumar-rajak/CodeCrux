@@ -96,6 +96,9 @@ document.getElementById('login-form').addEventListener('submit', async (event) =
             case 'admin':
                 apiEndpoint = '/api/v1/admin/login';
                 break;
+            case 'collector':
+                apiEndpoint = '/api/v1/collector/login';
+                break;
             default:
                 throw new Error('Invalid user type');
         }
@@ -128,6 +131,9 @@ document.getElementById('login-form').addEventListener('submit', async (event) =
                     break;
                 case 'admin':
                     window.location.href = '/admin/dashboard';
+                    break;
+                case 'collector':
+                    window.location.href = '/collector/dashboard';
                     break;
             }
         }, 1500);

@@ -312,8 +312,20 @@ const getAvailableWaste = async (req, res, next) => {
 // Request waste collection
 const requestWasteCollection = async (req, res, next) => {
     try {
-        const { reportIds } = req.body;
+        let { reportIds } = req.body;
 
+        // If reportIds is a string (e.g., "[232,231]", "312312,42321"), try to parse it into an array
+        if (typeof reportIds === 'string') {
+            try {
+                // Check if it's a string representing an array and parse it
+                reportIds = JSON.parse(reportIds);
+            } catch (err) {
+                // If parsing fails, check if it's a comma-separated string
+                reportIds = reportIds.split(',').map(id => id.trim());
+            }
+        }
+
+        // If it's not an array after parsing, return error
         if (!Array.isArray(reportIds) || reportIds.length === 0) {
             return next(new ApiError(400, 'reportIds should be a non-empty array'));
         }
@@ -358,6 +370,7 @@ const requestWasteCollection = async (req, res, next) => {
         next(new ApiError(500, 'Error requesting waste collection'));
     }
 };
+
 
 
 // Get vendor dashboard stats

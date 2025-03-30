@@ -32,78 +32,78 @@ const generateAccessAndRefereshTokens = async (userId) => {
 };
 
 const registerCollector = asyncHandler(async (req, res, next) => {
-	let session;
-	try {
-		// Start session for transaction handling
-		session = await mongoose.startSession();
-		session.startTransaction();
+    let session;
+    try {
+        // Start session for transaction handling
+        session = await mongoose.startSession();
+        session.startTransaction();
 
-		// Extract fields from the request body
-		const { employeeId, fullName, email, password, assignedZone, currentLocation } = req.body;
+        // Extract fields from the request body
+        const { employeeId, fullName, email, password, assignedZone, currentLocation } = req.body;
 
-		// Validate required fields
-		if (!employeeId || !fullName || !email || !password || !assignedZone || !currentLocation) {
-			return next(new ApiError(400, "All required fields must be provided"));
-		}
+        // Validate required fields
+        if (!employeeId || !fullName || !email || !password || !assignedZone || !currentLocation) {
+            return next(new ApiError(400, "All required fields must be provided"));
+        }
 
-		// Check if the collector already exists by email or employeeId
-		const existingCollector = await Collector.findOne({ $or: [{ email }, { employeeId }] });
-		if (existingCollector) {
-			return next(new ApiError(409, "Collector with this email or employee ID already exists"));
-		}
+        // Check if the collector already exists by email or employeeId
+        const existingCollector = await Collector.findOne({ $or: [{ email }, { employeeId }] });
+        if (existingCollector) {
+            return next(new ApiError(409, "Collector with this email or employee ID already exists"));
+        }
 
-		// Process coordinates for currentLocation
-		const parsedCoordinates = parseCoordinates(currentLocation.coordinates);
-		if (!parsedCoordinates) {
-			return next(new ApiError(400, "Invalid coordinates for current location"));
-		}
+        // Process coordinates for currentLocation
+        const parsedCoordinates = parseCoordinates(currentLocation.coordinates);
+        if (!parsedCoordinates) {
+            return next(new ApiError(400, "Invalid coordinates for current location"));
+        }
 
-		// Create a new collector document
-		const collector = await Collector.create(
-			[{
-				employeeId,
-				fullName,
-				email,
-				password,
-				assignedZone,
-				role: "collector",  // Default role for collector
-				currentLocation: { 
-					type: "Point", 
-					coordinates: parsedCoordinates 
-				}
-			}],
-			{ session }
-		);
+        // Create a new collector document
+        const collector = await Collector.create(
+            [{
+                employeeId,
+                fullName,
+                email,
+                password,
+                assignedZone,
+                role: "collector",  // Default role for collector
+                currentLocation: {
+                    type: "Point",
+                    coordinates: parsedCoordinates
+                }
+            }],
+            { session }
+        );
 
-		// Commit the transaction
-		await session.commitTransaction();
-		session.endSession();
+        // Commit the transaction
+        await session.commitTransaction();
+        session.endSession();
 
-		// Retrieve the created collector to return with the response
-		const createdCollector = await Collector.findById(collector[0]._id);
+        // Retrieve the created collector to return with the response
+        const createdCollector = await Collector.findById(collector[0]._id);
 
-		// Check if collector creation was successful
-		if (!createdCollector) {
-			return next(new ApiError(500, "Something went wrong while registering the collector"));
-		}
+        // Check if collector creation was successful
+        if (!createdCollector) {
+            return next(new ApiError(500, "Something went wrong while registering the collector"));
+        }
 
-		// Generate access and refresh tokens for the collector (if needed)
-		const { accessToken, refreshToken } = await generateAccessAndRefereshTokens(createdCollector._id);
+        // Generate access and refresh tokens for the collector (if needed)
+        const { accessToken, refreshToken } = await generateAccessAndRefereshTokens(createdCollector._id);
 
-		// Send success response
-		return res.status(201).json(
-			new ApiResponse(200, { createdCollector, accessToken, refreshToken }, "Collector registered successfully")
-		);
+        // Send success response
+        return res.status(201).json(
+            new ApiResponse(200, { createdCollector, accessToken, refreshToken }, "Collector registered successfully")
+        );
 
-	} catch (error) {
-		// If an error occurs, abort the transaction and end session
-		if (session) {
-			await session.abortTransaction();
-			session.endSession();
-		}
-		console.error("Error during transaction: ", error);
-		return next(new ApiError(500, "Something went wrong while registering the collector"));
-	}
+    } catch (error) {
+        // If an error occurs, abort the transaction and end session
+        if (session) {
+            await session.abortTransaction();
+            session.endSession();
+        }
+        console.error("Error during transaction: ", error);
+        return next(new ApiError(500, "Something went wrong while registering the collector"));
+    }
 });
 
 
@@ -132,7 +132,7 @@ const loginUser = asyncHandler(async (req, res) => {
         );
     }
 
-    const user = await User.findOne({ email});
+    const user = await User.findOne({ email });
 
     if (!user) {
         throw new ApiError(404, "Admin does not exist");
@@ -260,7 +260,7 @@ const refreshAccessToken = asyncHandler(
 const updateLocation = async (req, res, next) => {
     try {
         const { coordinates } = req.body;
-        
+
         await Collector.findByIdAndUpdate(req.user._id, {
             currentLocation: {
                 type: 'Point',
@@ -281,7 +281,7 @@ const getAssignedPickups = async (req, res, next) => {
             .populate({
                 path: 'assignedPickups',
                 populate: [
-                    { path: 'wasteReport', populate: { path: 'reportedBy', select: 'fullName phoneNo' } },
+                    { path: 'wasteReport', populate: { path: 'reportedBy', select: 'fullName phoneNo coordinates' } },
                     { path: 'vendor', select: 'companyName processingFacilityLocation' }
                 ]
             });
@@ -296,7 +296,7 @@ const getAssignedPickups = async (req, res, next) => {
 const markAsCollected = async (req, res, next) => {
     try {
         const { requestId, currentLocation } = req.body;
-        
+
         const request = await WasteProcessingRequest.findById(requestId)
             .populate('wasteReport')
             .populate('vendor');
@@ -331,7 +331,7 @@ const markAsCollected = async (req, res, next) => {
 const markAsDelivered = async (req, res, next) => {
     try {
         const { requestId, currentLocation } = req.body;
-        
+
         const request = await WasteProcessingRequest.findById(requestId)
             .populate('wasteReport')
             .populate('vendor');
@@ -375,7 +375,26 @@ const markAsDelivered = async (req, res, next) => {
 const getCollectorDashboard = async (req, res, next) => {
     try {
         const collector = await Collector.findById(req.user._id)
-            .populate('assignedPickups');
+            .populate('assignedPickups')
+            .populate({
+                path: 'assignedPickups',
+                match: { status: { $nin: ['completed', 'cancelled'] } }, // Filter at query level
+                populate: [
+                    {
+                        path: 'wasteReport',
+                        match: { status: { $nin: ['unidentified', 'pending'] } },
+                        populate: {
+                            path: 'reportedBy',
+                            select: 'fullName phoneNo'
+                        }
+                    },
+                    {
+                        path: 'vendor',
+                        select: 'companyName processingFacilityLocation'
+                    }
+                ]
+            })
+            .lean();
 
         const totalAssigned = collector.assignedPickups.length;
         const pendingPickups = collector.assignedPickups.filter(p => p.status === 'pending_vendor').length;
@@ -390,25 +409,100 @@ const getCollectorDashboard = async (req, res, next) => {
 
         res.status(200).json(new ApiResponse(200, dashboardData, 'Dashboard data fetched successfully'));
     } catch (error) {
+        console.log("error: ", error)
         next(new ApiError(500, 'Error fetching collector dashboard'));
     }
 };
 
+// get all pending pickups
+const getPendingPickupsWithDropoff = async (req, res, next) => {
+    try {
+        // Constants (could be moved to config/environment variables)
+        const DEFAULT_LANDFILL = {
+            name: "Landfill 1",
+            coordinates: [75.8169, 26.8365] // [longitude, latitude]
+        };
+
+        // Validate user ID
+        if (!req.user?._id) {
+            throw new ApiError(400, 'User ID is required');
+        }
+
+        // Fetch collector with populated data
+        const collector = await Collector.findById(req.user._id)
+            .populate({
+                path: 'assignedPickups',
+                match: { status: { $nin: ['completed', 'cancelled'] } }, // Filter at query level
+                populate: [
+                    {
+                        path: 'wasteReport',
+                        match: { status: { $nin: ['unidentified', 'pending'] } },
+                        populate: {
+                            path: 'reportedBy',
+                            select: 'fullName phoneNo'
+                        }
+                    },
+                    {
+                        path: 'vendor',
+                        select: 'companyName processingFacilityLocation'
+                    }
+                ]
+            })
+            .lean(); // Convert to plain JS object for better performance
+
+        if (!collector) {
+            throw new ApiError(404, 'Collector not found');
+        }
+
+        // Process pickups
+        const processedPickups = collector.assignedPickups
+            .filter(pickup => pickup.wasteReport) // Ensure wasteReport exists after population
+            .map(pickup => {
+                // Determine dropoff location
+                const dropoffLocation = pickup.status === "accepted" && pickup.vendor
+                    ? {
+                        name: pickup.vendor.companyName,
+                        coordinates: pickup.vendor.processingFacilityLocation?.coordinates || DEFAULT_LANDFILL.coordinates
+                    }
+                    : DEFAULT_LANDFILL;
+
+                return {
+                    pickupId: pickup._id,
+                    status: pickup.status,
+                    wasteReport: {
+                        ...pickup.wasteReport,
+                        reporter: pickup.wasteReport.reportedBy // Rename for clarity
+                    },
+                    dropoffLocation,
+                    pickupLocation: pickup.wasteReport?.location // Assuming wasteReport has location
+                };
+            });
+
+        res.status(200).json(
+            new ApiResponse(200, processedPickups, 'Pickups with dropoff locations fetched successfully')
+        );
+
+    } catch (error) {
+        // Pass along existing ApiError or create new one
+        next(error instanceof ApiError ? error :
+            new ApiError(500, 'Error fetching pickups with dropoff locations'));
+    }
+};
 // Helper function to calculate distance between two points
 function calculateDistance(point1, point2) {
     const [lon1, lat1] = point1;
     const [lon2, lat2] = point2;
-    
-    const R = 6371e3; // Earth radius in meters
-    const φ1 = lat1 * Math.PI/180;
-    const φ2 = lat2 * Math.PI/180;
-    const Δφ = (lat2-lat1) * Math.PI/180;
-    const Δλ = (lon2-lon1) * Math.PI/180;
 
-    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ/2) * Math.sin(Δλ/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const R = 6371e3; // Earth radius in meters
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+        Math.cos(φ1) * Math.cos(φ2) *
+        Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     return R * c; // Distance in meters
 }
@@ -420,7 +514,98 @@ function calculateReward(weight, isUseful) {
     return Math.floor(isUseful ? N * weight : W * weight);
 }
 
-export{
+
+// controllers/wasteController.js
+const getWasteDetails = async (req, res, next) => {
+    try {
+        const { wasteId } = req.params;
+
+        // Find the waste report and populate basic resident info
+        const wasteReport = await WasteReport.findById(wasteId)
+            .populate('reportedBy', 'fullName phoneNo address')
+            .lean();
+
+        if (!wasteReport) {
+            throw new ApiError(404, 'Waste report not found');
+        }
+
+        // Find processing requests for this waste report
+        const processingRequests = await WasteProcessingRequest.find({ wasteReport: wasteId })
+            .populate('vendor', 'companyName processingFacilityLocation address')
+            .populate('collector', 'name vehicleNumber')
+            .sort({ createdAt: -1 }) // Sort by newest first
+            .lean();
+
+        // Corrected version
+        const activeRequest = processingRequests.find(req =>
+            ['pending_vendor', 'accepted'].includes(req.status)
+        ) || (processingRequests.length > 0 ? processingRequests[0] : null);
+
+        // Prepare the response data
+        const responseData = {
+            wasteReport: {
+                _id: wasteReport._id,
+                wasteType: {
+                    userReported: wasteReport.userReportedType,
+                    mlIdentified: wasteReport.mlIdentifiedType,
+                    mlDetails: wasteReport.mlDetails
+                },
+                weight: wasteReport.approximateWeight,
+                status: wasteReport.status,
+                location: {
+                    coordinates: wasteReport.coordinates.coordinates,
+                    address: wasteReport.address,
+                    zone: wasteReport.assignedZone
+                },
+                images: wasteReport.photoUrl,
+                createdAt: wasteReport.createdAt
+            },
+            resident: {
+                name: wasteReport.reportedBy.fullName,
+                contact: wasteReport.reportedBy.phoneNo,
+                address: wasteReport.reportedBy.address
+            },
+            currentProcessing: activeRequest ? {
+                _id: activeRequest._id,
+                status: activeRequest.status,
+                vendor: activeRequest.vendor ? {
+                    _id: activeRequest.vendor._id,
+                    companyName: activeRequest.vendor.companyName,
+                    address: activeRequest.vendor.address,
+                    processingFacilityLocation: activeRequest.vendor.processingFacilityLocation.coordinates
+                } : null,
+                collector: activeRequest.collector || null,
+                createdAt: activeRequest.createdAt
+            } : null,
+            processingHistory: processingRequests.map(req => ({
+                _id: req._id,
+                status: req.status,
+                vendor: req.vendor ? {
+                    companyName: req.vendor.companyName,
+                    location: req.vendor.processingFacilityLocation.coordinates
+                } : null,
+                collector: req.collector ? {
+                    name: req.collector.name,
+                    vehicle: req.collector.vehicleNumber
+                } : null,
+                date: req.createdAt
+            }))
+        };
+
+        return res.status(200)
+            .json(new ApiResponse(200, responseData, 'Waste details fetched successfully'));
+
+    } catch (error) {
+        console.log("error:", error)
+        next(new ApiError(
+            error.statusCode || 500,
+            error.message || 'Error fetching waste details'
+        ));
+    }
+};
+
+
+export {
     registerCollector,
     loginUser,
     logoutUser,
@@ -430,5 +615,7 @@ export{
     getAssignedPickups,
     markAsCollected,
     markAsDelivered,
-    getCollectorDashboard
+    getCollectorDashboard,
+    getPendingPickupsWithDropoff,
+    getWasteDetails,
 };

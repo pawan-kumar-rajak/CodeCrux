@@ -25,4 +25,4 @@ const wasteReportSchema = new Schema(
     }
   );
   wasteReportSchema.index({ coordinates: '2dsphere' });
-  export const WasteReport = mongoose.model("WasteReport", wasteReportSchema);
+  export const  WasteReport = mongoose.model("WasteReport", wasteReportSchema);

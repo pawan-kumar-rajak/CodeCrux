@@ -10,7 +10,9 @@ import{
         getAssignedPickups,
         markAsCollected,
         markAsDelivered,
-        getCollectorDashboard
+        getCollectorDashboard,
+        getPendingPickupsWithDropoff,
+        getWasteDetails
 } from "../controllers/collector.controller.js";
 import { verifyJWT } from "../middlewares/Auth.middleware.js";
 
@@ -22,9 +24,11 @@ router.post("/logout", verifyJWT, logoutUser);
 router.post("/refresh_token", refreshAccessToken);
 
 router.post("/update_location", verifyJWT, updateLocation);
-router.get("/get_assigned_pickups", verifyJWT, getAssignedPickups);
+// router.get("/get_assigned_pickups", verifyJWT, getAssignedPickups);
 router.post("/mark_as_collected", verifyJWT, markAsCollected);
 router.post("/mark_as_delivered", verifyJWT, markAsDelivered);
 router.get("/get_collector_dashboard", verifyJWT, getCollectorDashboard);
+router.get("/get_assigned_pickups", verifyJWT,getAssignedPickups);
+router.get("/waste/:wasteId", getWasteDetails);
 
 export default router;

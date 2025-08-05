@@ -1,6 +1,7 @@
 # ♻️ Waste-to-Energy: Smart Waste Management & Recycling System
 
-![Project Banner](https://images.unsplash.com/photo-1584473457406-6240486418e9?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&h=600&q=80)
+<img width="1280" height="663" alt="image" src="https://github.com/user-attachments/assets/490eb461-bec8-4850-951b-2804b3a85b4d" />
+
 
 **Transform Waste into Value** • **Reduce Landfill Waste** • **Create Sustainable Communities**
 

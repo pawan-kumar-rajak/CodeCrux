@@ -292,7 +292,7 @@ const loginUser = asyncHandler(async (req, res, next) => {
 	//send cookie
 
 	const { email, username, password } = req.body;
-	console.log(email);
+	
 
 	// if (!username && !email) {
 	//     throw new ApiError(400, "username or email is required")
@@ -306,9 +306,9 @@ const loginUser = asyncHandler(async (req, res, next) => {
 		);
 	}
 
-	const user = await User.findOne({
-		$or: [{ username }, { email }],
+	const user = await User.findOne({email:email
 	});
+	
 
 	if (!user) {
 		return next(new ApiError(404, "User does not exist"))
@@ -589,9 +589,9 @@ const reportWaste = async (req, res, next) => {
             const form = new FormData();
             form.append('image', fs.createReadStream(file.path));
 
-            const detectionResponse = await axios.post('http://172.22.103.58:5000/detect', form, {
+            const detectionResponse = await axios.post('http://localhost:3000/detect', form, {
                 headers: form.getHeaders(),
-                timeout: 5000 // 5 second timeout
+                timeout: 5000000 // 5 second timeout
             });
 
             if (detectionResponse.data.success) {

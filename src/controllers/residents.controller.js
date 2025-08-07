@@ -567,18 +567,35 @@ const reportWaste = async (req, res, next) => {
             return next(new ApiError(400, "At least one image is required."));
         }
 
-      
-      
+        // Validate required fields
+        if (!userReportedType || !approximateWeight || !assignedZone || !longitude || !latitude) {
+            return next(new ApiError(400, "All fields are required."));
+        }
+
         // 2. Now process with ML API using the original file
         let mlIdentifiedType = userReportedType;
         let detectedWasteTypes = [];
         let isRecyclable = false;
+        let mlDetails = {
+            detectedWasteTypes: [],
+            isRecyclable: false,
+            detectionSuccess: false,
+            confidence: 0,
+            energyPotential: 0,
+            co2Reduction: 0,
+            processingMethod: 'Unknown',
+            fraudDetection: {
+                isSuspicious: false,
+                anomalyScore: 0
+            },
+            vendorMatches: []
+        };
 
         try {
             // Use the first file that's still available in memory
             const file = req.files[0];
 
-			console.log("files", req.files);
+            console.log("Processing file with ML:", file.originalname);
             
             // Verify file exists before processing
             if (!fs.existsSync(file.path)) {
@@ -588,30 +605,62 @@ const reportWaste = async (req, res, next) => {
 
             const form = new FormData();
             form.append('image', fs.createReadStream(file.path));
+            form.append('user_id', residentId.toString());
+            form.append('user_reported_type', userReportedType);
+            form.append('weight', approximateWeight);
+            form.append('latitude', latitude);
+            form.append('longitude', longitude);
 
             const detectionResponse = await axios.post('http://localhost:3000/detect', form, {
                 headers: form.getHeaders(),
-                timeout: 5000000 // 5 second timeout
+                timeout: 30000 // 30 second timeout
             });
 
             if (detectionResponse.data.success) {
-                detectedWasteTypes = detectionResponse.data.detected_waste;
-                isRecyclable = detectionResponse.data.recyclable;
+                const mlResult = detectionResponse.data;
+                detectedWasteTypes = mlResult.detected_waste || [];
+                isRecyclable = mlResult.recyclable || false;
 
                 // Find best matching type
                 const normalizedUserType = userReportedType.toLowerCase();
                 mlIdentifiedType = detectedWasteTypes.find(type => 
                     type.toLowerCase().includes(normalizedUserType)
                 ) || detectedWasteTypes[0] || userReportedType;
+
+                // Enhanced ML details
+                mlDetails = {
+                    detectedWasteTypes: detectedWasteTypes,
+                    isRecyclable: isRecyclable,
+                    detectionSuccess: detectedWasteTypes.length > 0,
+                    confidence: mlResult.confidence || 0,
+                    energyPotential: mlResult.energy_potential || 0,
+                    co2Reduction: mlResult.co2_reduction || 0,
+                    processingMethod: mlResult.waste_details?.processing_method || 'Unknown',
+                    fraudDetection: {
+                        isSuspicious: mlResult.fraud_detection?.is_suspicious || false,
+                        anomalyScore: mlResult.fraud_detection?.anomaly_score || 0
+                    },
+                    vendorMatches: mlResult.vendor_matches || [],
+                    userAiMatch: mlResult.user_ai_match || false
+                };
+
+                console.log('ML Analysis successful:', {
+                    userType: userReportedType,
+                    aiType: mlIdentifiedType,
+                    confidence: mlDetails.confidence,
+                    energyPotential: mlDetails.energyPotential,
+                    co2Reduction: mlDetails.co2Reduction
+                });
             }
         } catch (mlError) {
             console.error('ML Processing Error:', mlError.message);
-			
-			
+            
             // Continue with user-reported type if ML fails
+            mlDetails.detectionSuccess = false;
+            mlDetails.error = mlError.message;
         }
 
-		const uploadedImages = await MultiUploadOnCloudinary(
+        const uploadedImages = await MultiUploadOnCloudinary(
             req.files.map((file) => file.path),
             'Waste'
         );
@@ -620,6 +669,19 @@ const reportWaste = async (req, res, next) => {
             return next(new ApiError(500, "Failed to upload images to Cloudinary."));
         }
 
+        // Calculate status based on ML results
+        let status = 'pending';
+        if (mlDetails.detectionSuccess) {
+            if (mlDetails.userAiMatch) {
+                status = 'useful';
+            } else if (detectedWasteTypes.some(t => 
+                t.toLowerCase().includes(userReportedType.toLowerCase())
+            )) {
+                status = 'useful';
+            } else {
+                status = 'unidentified';
+            }
+        }
 
         // Create the report
         const newReport = await WasteReport.create({
@@ -627,25 +689,26 @@ const reportWaste = async (req, res, next) => {
             photoUrl: uploadedImages,
             userReportedType,
             mlIdentifiedType,
-            approximateWeight,
+            approximateWeight: parseFloat(approximateWeight),
             coordinates: {
                 type: 'Point',
                 coordinates: parseCoordinates(coordinates)
             },
-            status: detectedWasteTypes.some(t => 
-                t.toLowerCase().includes(userReportedType.toLowerCase())
-            ) ? 'useful' : 'unidentified',
+            status,
             assignedZone,
-            mlDetails: {
-                detectedWasteTypes,
-                isRecyclable,
-                detectionSuccess: detectedWasteTypes.length > 0
-            }
+            mlDetails
         });
 
-        // Update resident
+        // Update resident with new report and calculate rewards
+        const resident = await Resident.findById(residentId);
+        const rewardPoints = calculateRewardPoints(approximateWeight, mlDetails);
+        
         await Resident.findByIdAndUpdate(residentId, {
-            $push: { wasteReports: newReport._id }
+            $push: { wasteReports: newReport._id },
+            $inc: { 
+                totalRewards: rewardPoints,
+                totalReports: 1
+            }
         });
 
         // Cleanup: Delete temporary files
@@ -659,38 +722,121 @@ const reportWaste = async (req, res, next) => {
             }
         });
 
-        res.status(201).json(new ApiResponse(201, newReport, 'Report submitted'));
+        // Return success response with enhanced data
+        return res.status(201).json(
+            new ApiResponse(
+                201,
+                {
+                    report: newReport,
+                    mlAnalysis: mlDetails,
+                    rewardPoints,
+                    message: `Waste report submitted successfully! You earned ${rewardPoints} points.`
+                },
+                "Waste report created successfully"
+            )
+        );
 
     } catch (error) {
-        console.error("Report Error:", error);
-        next(new ApiError(500, error.message || 'Report submission failed'));
+        console.error('Error in reportWaste:', error);
+        return next(new ApiError(500, "Error creating waste report"));
     }
 };
 
+// Helper function to calculate reward points
+function calculateRewardPoints(weight, mlDetails) {
+    let basePoints = parseFloat(weight) * 10; // 10 points per kg
+    
+    // Bonus for recyclable waste
+    if (mlDetails.isRecyclable) {
+        basePoints *= 1.5;
+    }
+    
+    // Bonus for high confidence AI detection
+    if (mlDetails.confidence > 80) {
+        basePoints *= 1.2;
+    }
+    
+    // Bonus for user-AI match
+    if (mlDetails.userAiMatch) {
+        basePoints *= 1.3;
+    }
+    
+    // Penalty for suspicious activity
+    if (mlDetails.fraudDetection.isSuspicious) {
+        basePoints *= 0.5;
+    }
+    
+    return Math.round(basePoints);
+}
 
 
 // Get resident dashboard stats
 const getResidentDashboard = async (req, res, next) => {
-	try {
-		const resident = await Resident.findById(req.user._id)
-			.populate('wasteReports')
-			.populate('address').sort({createdAt: -1});
+    try {
+        const residentId = req.user._id;
 
-		const totalReports = resident.wasteReports.length;
-		const totalRewards = resident.rewardCoins;
-		const pendingReports = resident.wasteReports.filter(report => report.status === 'pending').length;
+        // Get resident with populated reports
+        const resident = await Resident.findById(residentId)
+            .populate({
+                path: 'wasteReports',
+                options: { sort: { createdAt: -1 }, limit: 10 }
+            });
 
-		const dashboardData = {
-			totalReports,
-			totalRewards,
-			pendingReports,
-			recentReports: resident.wasteReports.slice(0, 25)
-		};
+        if (!resident) {
+            return next(new ApiError(404, "Resident not found"));
+        }
 
-		res.status(200).json(new ApiResponse(200, dashboardData, 'Dashboard data fetched successfully'));
-	} catch (error) {
-		next(new ApiError(500, 'Error fetching resident dashboard'));
-	}
+        // Calculate dashboard metrics
+        const totalReports = resident.wasteReports?.length || 0;
+        const pendingReports = resident.wasteReports?.filter(report => 
+            report.status === 'pending'
+        ).length || 0;
+
+        // Calculate energy and CO2 metrics from all reports
+        let totalEnergyGenerated = 0;
+        let totalCo2Reduced = 0;
+
+        if (resident.wasteReports && resident.wasteReports.length > 0) {
+            resident.wasteReports.forEach(report => {
+                if (report.mlDetails && report.mlDetails.energyPotential) {
+                    totalEnergyGenerated += report.mlDetails.energyPotential;
+                }
+                if (report.mlDetails && report.mlDetails.co2Reduction) {
+                    totalCo2Reduced += report.mlDetails.co2Reduction;
+                }
+            });
+        }
+
+        // Get recent reports with enhanced data
+        const recentReports = resident.wasteReports?.map(report => ({
+            _id: report._id,
+            userReportedType: report.userReportedType,
+            mlIdentifiedType: report.mlIdentifiedType,
+            approximateWeight: report.approximateWeight,
+            status: report.status,
+            assignedZone: report.assignedZone,
+            photoUrl: report.photoUrl,
+            createdAt: report.createdAt,
+            mlDetails: report.mlDetails || {}
+        })) || [];
+
+        const dashboardData = {
+            totalRewards: resident.totalRewards || 0,
+            totalReports,
+            pendingReports,
+            energyGenerated: Math.round(totalEnergyGenerated),
+            co2Reduced: Math.round(totalCo2Reduced),
+            reports: recentReports
+        };
+
+        return res.status(200).json(
+            new ApiResponse(200, dashboardData, "Dashboard data fetched successfully")
+        );
+
+    } catch (error) {
+        console.error('Error fetching dashboard:', error);
+        return next(new ApiError(500, "Error fetching dashboard data"));
+    }
 };
 
 // Get all waste reports by resident
@@ -705,6 +851,52 @@ const getMyWasteReports = async (req, res, next) => {
 	}
 };
 
+const getWasteDetails = async (req, res, next) => {
+    try {
+        const { wasteId } = req.params;
+        const residentId = req.user._id;
+
+        // Find the waste report and ensure it belongs to the resident
+        const wasteReport = await WasteReport.findById(wasteId)
+            .populate('reportedBy', 'fullName phone email');
+
+        if (!wasteReport) {
+            return next(new ApiError(404, "Waste report not found"));
+        }
+
+        // Check if the report belongs to the requesting resident
+        if (wasteReport.reportedBy._id.toString() !== residentId.toString()) {
+            return next(new ApiError(403, "Access denied"));
+        }
+
+        // Format the response with enhanced ML details
+        const wasteDetails = {
+            _id: wasteReport._id,
+            userReportedType: wasteReport.userReportedType,
+            mlIdentifiedType: wasteReport.mlIdentifiedType,
+            approximateWeight: wasteReport.approximateWeight,
+            status: wasteReport.status,
+            assignedZone: wasteReport.assignedZone,
+            photoUrl: wasteReport.photoUrl,
+            coordinates: wasteReport.coordinates,
+            createdAt: wasteReport.createdAt,
+            reportedBy: {
+                fullName: wasteReport.reportedBy.fullName,
+                phone: wasteReport.reportedBy.phone,
+                email: wasteReport.reportedBy.email
+            },
+            mlDetails: wasteReport.mlDetails || {}
+        };
+
+        return res.status(200).json(
+            new ApiResponse(200, wasteDetails, "Waste details fetched successfully")
+        );
+
+    } catch (error) {
+        console.error('Error fetching waste details:', error);
+        return next(new ApiError(500, "Error fetching waste details"));
+    }
+};
 
 
 export {
@@ -723,5 +915,6 @@ export {
 	reportWaste,
 	getResidentDashboard,
 	getMyWasteReports,
+	getWasteDetails,
 
 };

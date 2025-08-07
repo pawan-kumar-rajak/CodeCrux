@@ -12,11 +12,24 @@ import axios from "axios";
 import { ApiError } from "./utils/ApiError.js";
 const app = express();
 app.use(express.json())
+const allowedOrigins = [
+  'http://localhost:5000',
+  'http://localhost:3000',
+];
+
 app.use(
-	cors({
-        origin: 'http://localhost:5000', // Replace with your frontend URL
-        credentials: true  // Must be true for cookies
-    })
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        return callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true
+  })
 );
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));

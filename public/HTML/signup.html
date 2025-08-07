@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - CodeCrux Waste-to-Energy Platform</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="/public/CSS/signupstyles.css">
+</head>
+<body>
+    <div class="signup-container">
+        <div class="signup-background">
+            <div class="background-overlay"></div>
+        </div>
+        
+        <div class="signup-content">
+            <div class="signup-header">
+                <a href="/" class="logo">
+                    <i class="fas fa-leaf"></i>
+                    <span>CodeCrux</span>
+                </a>
+                <h1>Join the Revolution</h1>
+                <p>Create your account and start contributing to a sustainable future</p>
+            </div>
+
+            <form id="signupForm" class="signup-form">
+                <div class="form-group">
+                    <label for="userType">I want to register as:</label>
+                    <select id="userType" name="userType" required>
+                        <option value="">Select your role</option>
+                        <option value="resident">Resident</option>
+                        <option value="collector">Waste Collector</option>
+                        <option value="vendor">Processing Vendor</option>
+                        <option value="admin">Municipal Admin</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="firstName">First Name</label>
+                        <div class="input-group">
+                            <i class="fas fa-user"></i>
+                            <input type="text" id="firstName" name="firstName" placeholder="Enter your first name" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="lastName">Last Name</label>
+                        <div class="input-group">
+                            <i class="fas fa-user"></i>
+                            <input type="text" id="lastName" name="lastName" placeholder="Enter your last name" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <div class="input-group">
+                        <i class="fas fa-envelope"></i>
+                        <input type="email" id="email" name="email" placeholder="Enter your email" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">Phone Number</label>
+                    <div class="input-group">
+                        <i class="fas fa-phone"></i>
+                        <input type="tel" id="phone" name="phone" placeholder="Enter your phone number" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-group">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="password" name="password" placeholder="Create a strong password" required>
+                        <button type="button" class="password-toggle" onclick="togglePassword('password')">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <div class="password-strength" id="passwordStrength"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password</label>
+                    <div class="input-group">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm your password" required>
+                        <button type="button" class="password-toggle" onclick="togglePassword('confirmPassword')">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Role-specific fields -->
+                <div id="residentFields" class="role-fields" style="display: none;">
+                    <div class="form-group">
+                        <label for="address">Address</label>
+                        <div class="input-group">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <input type="text" id="address" name="address" placeholder="Enter your address">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="city">City</label>
+                            <input type="text" id="city" name="city" placeholder="Enter your city">
+                        </div>
+                        <div class="form-group">
+                            <label for="pincode">Pincode</label>
+                            <input type="text" id="pincode" name="pincode" placeholder="Enter pincode">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="vendorFields" class="role-fields" style="display: none;">
+                    <div class="form-group">
+                        <label for="companyName">Company Name</label>
+                        <div class="input-group">
+                            <i class="fas fa-building"></i>
+                            <input type="text" id="companyName" name="companyName" placeholder="Enter company name">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="processingType">Processing Type</label>
+                        <select id="processingType" name="processingType">
+                            <option value="">Select processing type</option>
+                            <option value="torrefaction">Torrefaction</option>
+                            <option value="biogas">Biogas Production</option>
+                            <option value="recycling">Recycling</option>
+                            <option value="composting">Composting</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="capacity">Processing Capacity (kg/day)</label>
+                        <input type="number" id="capacity" name="capacity" placeholder="Enter daily capacity">
+                    </div>
+                </div>
+
+                <div id="collectorFields" class="role-fields" style="display: none;">
+                    <div class="form-group">
+                        <label for="vehicleNumber">Vehicle Number</label>
+                        <div class="input-group">
+                            <i class="fas fa-truck"></i>
+                            <input type="text" id="vehicleNumber" name="vehicleNumber" placeholder="Enter vehicle number">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="vehicleType">Vehicle Type</label>
+                        <select id="vehicleType" name="vehicleType">
+                            <option value="">Select vehicle type</option>
+                            <option value="truck">Truck</option>
+                            <option value="van">Van</option>
+                            <option value="auto">Auto Rickshaw</option>
+                            <option value="bicycle">Bicycle</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="termsAccepted" name="termsAccepted" required>
+                        <span class="checkmark"></span>
+                        I agree to the <a href="/terms.html" target="_blank">Terms of Service</a> and <a href="/privacy.html" target="_blank">Privacy Policy</a>
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="newsletter" name="newsletter">
+                        <span class="checkmark"></span>
+                        Subscribe to our newsletter for updates and tips
+                    </label>
+                </div>
+
+                <button type="submit" class="signup-button">
+                    <span class="button-text">Create Account</span>
+                    <span class="button-loader" style="display: none;">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </span>
+                </button>
+            </form>
+
+            <div class="signup-footer">
+                <p>Already have an account? <a href="/public/HTML/login.html">Sign in here</a></p>
+            </div>
+
+            <div class="features-preview">
+                <h3>Why Join CodeCrux?</h3>
+                <div class="features-grid">
+                    <div class="feature-item">
+                        <i class="fas fa-leaf"></i>
+                        <span>Environmental Impact</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-coins"></i>
+                        <span>Earn Rewards</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Track Progress</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-users"></i>
+                        <span>Join Community</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="signup-sidebar">
+            <div class="sidebar-content">
+                <div class="sidebar-header">
+                    <h2>Be Part of the Solution</h2>
+                    <p>Join thousands of users already making a difference</p>
+                </div>
+                
+                <div class="benefits-list">
+                    <div class="benefit-item">
+                        <div class="benefit-icon">
+                            <i class="fas fa-award"></i>
+                        </div>
+                        <div class="benefit-content">
+                            <h3>Earn Rewards</h3>
+                            <p>Get points for every waste report and redeem them for rewards</p>
+                        </div>
+                    </div>
+                    
+                    <div class="benefit-item">
+                        <div class="benefit-icon">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <div class="benefit-content">
+                            <h3>Track Impact</h3>
+                            <p>Monitor your environmental impact with detailed analytics</p>
+                        </div>
+                    </div>
+                    
+                    <div class="benefit-item">
+                        <div class="benefit-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <div class="benefit-content">
+                            <h3>Secure Platform</h3>
+                            <p>Your data is protected with enterprise-grade security</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-preview">
+                    <div class="stat-item">
+                        <div class="stat-number">1,000+</div>
+                        <div class="stat-label">Active Users</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">5,000 kg</div>
+                        <div class="stat-label">Waste Processed</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">2,500 kWh</div>
+                        <div class="stat-label">Energy Generated</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success/Error Messages -->
+    <div id="messageContainer" class="message-container"></div>
+
+    <script src="/public/JS/signup.js"></script>
+</body>
+</html>

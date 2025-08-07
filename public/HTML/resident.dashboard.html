@@ -4,19 +4,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Resident Dashboard</title>
+  <title>Resident Dashboard - Waste to Energy</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <link rel="stylesheet" href="/public/CSS/resident.dashboard.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <div class="dashboard-container">
     <header class="dashboard-header">
-      <h1>Resident Dashboard</h1>
+      <h1><i class="fas fa-leaf"></i> Waste to Energy Dashboard</h1>
       <div class="header-actions">
         <div class="reward-display">
           <i class="fas fa-coins reward-icon"></i>
           <span id="totalRewards">0</span>
+          <span class="reward-label">Points</span>
         </div>
         <button class="report-button" id="reportButton">
           <i class="fas fa-plus"></i> Report Waste
@@ -33,86 +35,174 @@
         <div class="stat-value" id="pendingReports">0</div>
         <div class="stat-label">Pending Reports</div>
       </div>
+      <div class="stat-card">
+        <div class="stat-value" id="energyGenerated">0</div>
+        <div class="stat-label">Energy Generated (kWh)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="co2Reduced">0</div>
+        <div class="stat-label">CO₂ Reduced (kg)</div>
+      </div>
     </div>
 
     <section class="recent-reports">
       <h2>Recent Reports
-      <button onclick="logoutUser()" id="logoutuser">Logout</button>
-    </h2>
+        <button onclick="logoutUser()" id="logoutuser">Logout</button>
+      </h2>
       <div class="reports-list" id="reportsList">
         <!-- Reports will be inserted here by JavaScript -->
       </div>
     </section>
   </div>
 
+  <!-- Enhanced Report Overlay with ML Results -->
   <div class="overlay" id="reportOverlay">
     <div class="overlay-content">
       <button class="close-overlay" id="closeOverlay">&times;</button>
-      <h2>Report Waste</h2>
-      <form id="reportForm"     enctype="multipart/form-data">
-        <div class="form-group">
-          <label for="wasteType">Waste Type</label>
-          <select id="wasteType" name="userReportedType" required>
-            <option value="E-waste">E-waste</option>
-            <option value="automobile wastes">Automobile Wastes</option>
-            <option value="battery waste">Battery Waste</option>
-            <option value="glass waste">Glass Waste</option>
-            <option value="light bulbs">Light Bulbs</option>
-            <option value="metal waste">Metal Waste</option>
-            <option value="organic waste">Organic Waste</option>
-            <option value="paper waste">Paper Waste</option>
-            <option value="plastic waste">Plastic Waste</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="weight">Approximate Weight (kg)</label>
-          <input type="number" id="weight" name="approximateWeight" min="1" required>
-        </div>
-
-        <div class="form-group">
-          <label for="zone">Zone</label>
-          <select id="zone" name="assignedZone" required>
-            <option value="">Select zone</option>
-            <option value="North District">North District</option>
-            <option value="South District">South District</option>
-            <option value="East District">East District</option>
-            <option value="West District">West District</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label>Location Coordinates</label>
-          <div class="coordinates-container">
-            <input type="text" id="longitude" name="longitude" placeholder="Longitude" readonly>
-            <input type="text" id="latitude" name="latitude" placeholder="Latitude" readonly>
-            <button type="button" id="getLocation" class="location-button">
-              <i class="fas fa-location-crosshairs"></i> Get My Location
-            </button>
+      <h2><i class="fas fa-robot"></i> AI-Powered Waste Report</h2>
+      
+      <!-- Step 1: Basic Information -->
+      <div class="form-step" id="step1">
+        <form id="reportForm" enctype="multipart/form-data">
+          <div class="form-group">
+            <label for="wasteType">Waste Type</label>
+            <select id="wasteType" name="userReportedType" required>
+              <option value="">Select waste type</option>
+              <option value="E-waste">E-waste</option>
+              <option value="automobile wastes">Automobile Wastes</option>
+              <option value="battery waste">Battery Waste</option>
+              <option value="glass waste">Glass Waste</option>
+              <option value="light bulbs">Light Bulbs</option>
+              <option value="metal waste">Metal Waste</option>
+              <option value="organic waste">Organic Waste</option>
+              <option value="paper waste">Paper Waste</option>
+              <option value="plastic waste">Plastic Waste</option>
+            </select>
           </div>
-          <small>Your current location will be used automatically</small>
-        </div>
 
-        <div class="form-group">
-          <label>Upload Photos</label>
-          <div class="dropzone" id="dropzone">
-            <div class="dropzone-content">
-              <i class="fas fa-cloud-upload-alt"></i>
-              <p>Drag & drop images here or click to browse</p>
-              <input type="file" id="images" name="images" multiple accept="image/*" hidden>
-              <button type="button" class="browse-button">Select Files</button>
+          <div class="form-group">
+            <label for="weight">Approximate Weight (kg)</label>
+            <div class="weight-slider-container">
+              <input type="range" id="weightSlider" min="1" max="100" value="5" class="weight-slider">
+              <input type="number" id="weight" name="approximateWeight" min="1" value="5" required>
+              <span class="weight-display">5 kg</span>
             </div>
-            <div class="preview-container" id="previewContainer"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="zone">Zone</label>
+            <select id="zone" name="assignedZone" required>
+              <option value="">Select zone</option>
+              <option value="North District">North District</option>
+              <option value="South District">South District</option>
+              <option value="East District">East District</option>
+              <option value="West District">West District</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Location Coordinates</label>
+            <div class="coordinates-container">
+              <input type="text" id="longitude" name="longitude" placeholder="Longitude" readonly>
+              <input type="text" id="latitude" name="latitude" placeholder="Latitude" readonly>
+              <button type="button" id="getLocation" class="location-button">
+                <i class="fas fa-location-crosshairs"></i> Get My Location
+              </button>
+            </div>
+            <small>Your current location will be used automatically</small>
+          </div>
+
+          <div class="form-group">
+            <label>Upload Photos</label>
+            <div class="dropzone" id="dropzone">
+              <div class="dropzone-content">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <p>Drag & drop images here or click to browse</p>
+                <input type="file" id="images" name="images" multiple accept="image/*" hidden>
+                <button type="button" class="browse-button">Select Files</button>
+              </div>
+              <div class="preview-container" id="previewContainer"></div>
+            </div>
+          </div>
+
+          <button type="submit" class="submit-button">
+            <i class="fas fa-brain"></i> Analyze with AI
+          </button>
+        </form>
+      </div>
+
+      <!-- Step 2: ML Analysis Results -->
+      <div class="form-step" id="step2" style="display: none;">
+        <div class="ml-analysis-header">
+          <h3><i class="fas fa-robot"></i> AI Analysis Complete</h3>
+          <div class="analysis-status">
+            <i class="fas fa-check-circle"></i> Waste Successfully Identified
           </div>
         </div>
 
-        <button type="submit" class="submit-button">Submit Report</button>
-      </form>
+        <div class="ml-results-container">
+          <div class="result-comparison">
+            <div class="user-prediction">
+              <h4>Your Prediction</h4>
+              <div class="prediction-badge" id="userPrediction">-</div>
+            </div>
+            <div class="ai-prediction">
+              <h4>AI Detection</h4>
+              <div class="prediction-badge ai" id="aiPrediction">-</div>
+              <div class="confidence-score">
+                Confidence: <span id="confidenceScore">-</span>%
+              </div>
+            </div>
+          </div>
+
+          <div class="waste-details-grid">
+            <div class="detail-card">
+              <h4><i class="fas fa-recycle"></i> Recyclability</h4>
+              <div class="detail-value" id="recyclabilityStatus">-</div>
+            </div>
+            <div class="detail-card">
+              <h4><i class="fas fa-bolt"></i> Energy Potential</h4>
+              <div class="detail-value" id="energyPotential">-</div>
+            </div>
+            <div class="detail-card">
+              <h4><i class="fas fa-leaf"></i> CO₂ Reduction</h4>
+              <div class="detail-value" id="co2Reduction">-</div>
+            </div>
+            <div class="detail-card">
+              <h4><i class="fas fa-industry"></i> Processing Method</h4>
+              <div class="detail-value" id="processingMethod">-</div>
+            </div>
+          </div>
+
+          <div class="vendor-matches">
+            <h4><i class="fas fa-handshake"></i> Recommended Vendors</h4>
+            <div class="vendor-list" id="vendorList">
+              <!-- Vendors will be populated here -->
+            </div>
+          </div>
+
+          <div class="fraud-detection">
+            <h4><i class="fas fa-shield-alt"></i> Security Check</h4>
+            <div class="fraud-status" id="fraudStatus">
+              <i class="fas fa-check-circle"></i> Report Verified
+            </div>
+          </div>
+        </div>
+
+        <div class="action-buttons">
+          <button class="btn btn-secondary" id="backToForm">
+            <i class="fas fa-arrow-left"></i> Back
+          </button>
+          <button class="btn btn-primary" id="confirmReport">
+            <i class="fas fa-check"></i> Confirm Report
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Waste Details Overlay -->
-<div id="wasteDetailsOverlay" class="overlay">
+  <!-- Enhanced Waste Details Overlay -->
+  <div id="wasteDetailsOverlay" class="overlay">
     <div class="overlay-content">
       <span class="close-overlay">&times;</span>
       <div class="waste-details-container">
@@ -122,6 +212,27 @@
         </div>
         <div class="waste-info">
           <h2 id="wasteTypeDetail"></h2>
+          
+          <!-- ML Analysis Section -->
+          <div class="ml-analysis-section">
+            <h3><i class="fas fa-robot"></i> AI Analysis</h3>
+            <div class="ml-details-grid">
+              <div class="ml-detail-item">
+                <span class="detail-label">AI Confidence:</span>
+                <span id="aiConfidence" class="detail-value">-</span>
+              </div>
+              <div class="ml-detail-item">
+                <span class="detail-label">Energy Potential:</span>
+                <span id="wasteEnergyPotential" class="detail-value">-</span>
+              </div>
+              <div class="ml-detail-item">
+                <span class="detail-label">CO₂ Reduction:</span>
+                <span id="wasteCo2Reduction" class="detail-value">-</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Basic Details -->
           <div class="detail-row">
             <span class="detail-label">Status:</span>
             <span id="wasteStatus" class="detail-value"></span>
@@ -151,6 +262,15 @@
   <div id="imageEnlargementOverlay" class="image-overlay">
     <span class="close-enlarged">&times;</span>
     <img id="enlargedImage" class="enlarged-image-content">
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <h3>AI is analyzing your waste...</h3>
+      <p>This may take a few seconds</p>
+    </div>
   </div>
 
   <script src="/public/JS/resident.dashboard.js"></script>

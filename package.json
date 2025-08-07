@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js",
-    "start": "nodemon index.js"
+    "start": "nodemon index.js",
+    "ml":"python src/ML/GARBAGENEW.PY"
   },
   "author": "Code Crux",
   "license": "ISC",

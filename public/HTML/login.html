@@ -3,51 +3,162 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - CleanCity</title>
-
-    <!-- Link to External CSS -->
+    <title>Login - CodeCrux Waste-to-Energy Platform</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="/public/CSS/loginstyles.css">
 </head>
 <body>
-
     <div class="login-container">
-        <h2 class="login-title">Log In to CleanCity</h2>
+        <div class="login-background">
+            <div class="background-overlay"></div>
+        </div>
         
-        <!-- Display Messages -->
-        <div id="message-box"></div>
-    
-        <form id="login-form" class="login-form">
-           
-    
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" required>
-            </div>
-    
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" required>
+        <div class="login-content">
+            <div class="login-header">
+                <a href="/" class="logo">
+                    <i class="fas fa-leaf"></i>
+                    <span>CodeCrux</span>
+                </a>
+                <h1>Welcome Back</h1>
+                <p>Sign in to your account to continue</p>
             </div>
 
-            <div class="form-group">
-                <label for="user-type">I am a</label>
-                <select id="user-type" required>
-                    <option value="">Select user type</option>
-                    <option value="resident">Resident</option>
-                    <option value="vendor">Vendor</option>
-                    <option value="admin">Admin</option>
-                    <option value="collector">Collector</option>
-                </select>
+            <form id="loginForm" class="login-form">
+                <div class="form-group">
+                    <label for="userType">I am a:</label>
+                    <select id="userType" name="userType" required>
+                        <option value="">Select your role</option>
+                        <option value="resident">Resident</option>
+                        <option value="collector">Waste Collector</option>
+                        <option value="vendor">Processing Vendor</option>
+                        <option value="admin">Municipal Admin</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <div class="input-group">
+                        <i class="fas fa-envelope"></i>
+                        <input type="email" id="email" name="email" placeholder="Enter your email" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-group">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="password" name="password" placeholder="Enter your password" required>
+                        <button type="button" class="password-toggle" onclick="togglePassword()">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-options">
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="rememberMe" name="rememberMe">
+                        <span class="checkmark"></span>
+                        Remember me
+                    </label>
+                    <a href="/forgot-password.html" class="forgot-link">Forgot Password?</a>
+                </div>
+
+                <button type="submit" class="login-button" id="loginButton">
+                    <span class="button-text">Sign In</span>
+                    <span class="button-loader" style="display: none;">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </span>
+                </button>
+            </form>
+
+            <div class="login-footer">
+                <p>Don't have an account? <a href="/signup.html">Sign up here</a></p>
             </div>
-    
-            <button type="submit" class="login-button">Login</button>
-        </form>
-    
-        <div class="login-footer">
-            <a href="forgot-password.html" class="forgot-password">Forgot Password?</a>
-            <p>Don't have an account? <a href="register.html" class="register-link">Register</a></p>
+
+            <div class="features-preview">
+                <h3>Platform Features</h3>
+                <div class="features-grid">
+                    <div class="feature-item">
+                        <i class="fas fa-brain"></i>
+                        <span>AI-Powered Classification</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Real-time Analytics</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-route"></i>
+                        <span>Route Optimization</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-gift"></i>
+                        <span>Reward System</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="login-sidebar">
+            <div class="sidebar-content">
+                <div class="sidebar-header">
+                    <h2>Transform Waste into Energy</h2>
+                    <p>Join the revolution in sustainable waste management</p>
+                </div>
+                
+                <div class="benefits-list">
+                    <div class="benefit-item">
+                        <div class="benefit-icon">
+                            <i class="fas fa-leaf"></i>
+                        </div>
+                        <div class="benefit-content">
+                            <h3>Environmental Impact</h3>
+                            <p>Reduce carbon footprint and contribute to a cleaner planet</p>
+                        </div>
+                    </div>
+                    
+                    <div class="benefit-item">
+                        <div class="benefit-icon">
+                            <i class="fas fa-bolt"></i>
+                        </div>
+                        <div class="benefit-content">
+                            <h3>Energy Generation</h3>
+                            <p>Convert waste into clean, renewable energy</p>
+                        </div>
+                    </div>
+                    
+                    <div class="benefit-item">
+                        <div class="benefit-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="benefit-content">
+                            <h3>Community Engagement</h3>
+                            <p>Connect with neighbors and build a sustainable community</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-preview">
+                    <div class="stat-item">
+                        <div class="stat-number">1,000+</div>
+                        <div class="stat-label">Active Users</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">5,000 kg</div>
+                        <div class="stat-label">Waste Processed</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">2,500 kWh</div>
+                        <div class="stat-label">Energy Generated</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+
+    <!-- Success/Error Messages -->
+    <div id="messageContainer" class="message-container"></div>
+
+    <script src="/public/JS/login.js"></script>
 </body>
-<script src="/public/JS/resident.connect.js"></script>
 </html>

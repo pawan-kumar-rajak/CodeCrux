@@ -2,11 +2,11 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { Collector, Collector as User } from "../models/collector.model.js";
 import { WasteProcessingRequest } from "../models/wasteProcessing.model.js";
-// import { WasteReport } from "../models/WasteReport.model.js";
 import { Resident } from "../models/resident.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import mongoose from "mongoose";
+import jwt from "jsonwebtoken";
 import { parseCoordinates } from "../utils/location_handling.js";
 import { WasteReport } from "../models/wasteReport.model.js";
 
@@ -117,25 +117,14 @@ const loginUser = asyncHandler(async (req, res) => {
     //access and referesh token
     //send cookie
 
-    const { email, username, password } = req.body;
-    console.log(email);
-
-    // if (!username && !email) {
-    //     throw new ApiError(400, "username or email is required")
-    // }
-
-    // Here is an alternative of above code based on logic discussed in video:
-    if (!(username || email)) {
-        throw new ApiError(
-            400,
-            "username or email is required"
-        );
+    const { email,password } = req.body;
+    if (!email || !password) {
+        throw new ApiError(400, "Email and password are required");
     }
 
     const user = await User.findOne({ email });
-
     if (!user) {
-        throw new ApiError(404, "Admin does not exist");
+        throw new ApiError(404, "Collector does not exist");
     }
 
     const isPasswordValid = await user.isPasswordCorrect(
@@ -143,7 +132,7 @@ const loginUser = asyncHandler(async (req, res) => {
     );
 
     if (!isPasswordValid) {
-        throw new ApiError(401, "Invalid Admin credentials");
+        throw new ApiError(401, "Invalid credentials");
     }
 
     const { accessToken, refreshToken } =
@@ -170,7 +159,7 @@ const loginUser = asyncHandler(async (req, res) => {
                     accessToken,
                     refreshToken,
                 },
-                "Admin logged In Successfully"
+                "Collector logged in successfully"
             )
         );
 });
@@ -257,75 +246,153 @@ const refreshAccessToken = asyncHandler(
 );
 
 // Update collector's current location
-const updateLocation = async (req, res, next) => {
-    try {
-        const { coordinates } = req.body;
-
-        await Collector.findByIdAndUpdate(req.user._id, {
-            currentLocation: {
-                type: 'Point',
-                coordinates: coordinates
-            }
-        });
-
-        res.status(200).json(new ApiResponse(200, null, 'Location updated successfully'));
-    } catch (error) {
-        next(new ApiError(500, 'Error updating location'));
+const updateLocation = asyncHandler(async (req, res) => {
+    const { coordinates } = req.body;
+    
+    if (!coordinates || !Array.isArray(coordinates) || coordinates.length !== 2) {
+        throw new ApiError(400, "Invalid coordinates format. Expected [longitude, latitude]");
     }
-};
+
+    const [longitude, latitude] = coordinates;
+    if (longitude < -180 || longitude > 180 || latitude < -90 || latitude > 90) {
+        throw new ApiError(400, "Invalid coordinates values");
+    }
+
+    await Collector.findByIdAndUpdate(req.user._id, {
+        currentLocation: {
+            type: 'Point',
+            coordinates: coordinates
+        }
+    }, { new: true });
+
+    return res.status(200).json(
+        new ApiResponse(200, { coordinates }, 'Location updated successfully')
+    );
+});
 
 // Get assigned pickups
-const getAssignedPickups = async (req, res, next) => {
-    try {
-        const collector = await Collector.findById(req.user._id)
-            .populate({
-                path: 'assignedPickups',
-                populate: [
-                    { path: 'wasteReport', populate: { path: 'reportedBy', select: 'fullName phoneNo coordinates' } },
-                    { path: 'vendor', select: 'companyName processingFacilityLocation' }
-                ]
-            });
+const getAssignedPickups = asyncHandler(async (req, res) => {
+    const collector = await Collector.findById(req.user._id)
+        .populate({
+            path: 'assignedPickups',
+            populate: [
+                { 
+                    path: 'wasteReport', 
+                    populate: { 
+                        path: 'reportedBy', 
+                        select: 'fullName phoneNo coordinates address' 
+                    } 
+                },
+                { 
+                    path: 'vendor', 
+                    select: 'companyName processingFacilityLocation address' 
+                }
+            ]
+        })
+        .lean();
 
-        res.status(200).json(new ApiResponse(200, collector.assignedPickups, 'Assigned pickups fetched successfully'));
-    } catch (error) {
-        next(new ApiError(500, 'Error fetching assigned pickups'));
+    if (!collector) {
+        throw new ApiError(404, "Collector not found");
     }
-};
+
+    const formattedPickups = collector.assignedPickups.map(pickup => ({
+        id: pickup._id,
+        status: pickup.status,
+        wasteReport: pickup.wasteReport ? {
+            id: pickup.wasteReport._id,
+            type: pickup.wasteReport.mlIdentifiedType,
+            weight: pickup.wasteReport.approximateWeight,
+            reporter: {
+                name: pickup.wasteReport.reportedBy.fullName,
+                phone: pickup.wasteReport.reportedBy.phoneNo,
+                address: pickup.wasteReport.reportedBy.address
+            },
+            location: pickup.wasteReport.coordinates
+        } : null,
+        vendor: pickup.vendor ? {
+            name: pickup.vendor.companyName,
+            facility: pickup.vendor.processingFacilityLocation,
+            address: pickup.vendor.address
+        } : null,
+        createdAt: pickup.createdAt
+    }));
+
+    return res.status(200).json(
+        new ApiResponse(200, formattedPickups, 'Assigned pickups fetched successfully')
+    );
+});
 
 // Mark pickup as collected
-const markAsCollected = async (req, res, next) => {
-    try {
-        const { requestId, currentLocation } = req.body;
+const markAsCollected = asyncHandler(async (req, res) => {
+    const { requestId, currentLocation } = req.body;
 
-        const request = await WasteProcessingRequest.findById(requestId)
-            .populate('wasteReport')
-            .populate('vendor');
-
-        if (!request) {
-            return next(new ApiError(404, 'Request not found'));
-        }
-
-        // Check proximity to pickup location (50 meters)
-        const distance = calculateDistance(
-            currentLocation,
-            request.wasteReport.coordinates.coordinates
-        );
-
-        if (distance > 50) {
-            return next(new ApiError(400, 'You must be within 50 meters to mark as collected'));
-        }
-
-        // Update waste report status
-        await WasteReport.findByIdAndUpdate(request.wasteReport._id, {
-            status: 'collector_assigned'
-        });
-
-        res.status(200).json(new ApiResponse(200, null, 'Pickup marked as collected successfully'));
-    } catch (error) {
-        console.log("error while marking as collected", error);
-        next(new ApiError(500, 'Error marking pickup as collected'));
+    if (!requestId || !currentLocation || !Array.isArray(currentLocation) || currentLocation.length !== 2) {
+        throw new ApiError(400, "Invalid request parameters");
     }
-};
+
+    const request = await WasteProcessingRequest.findById(requestId)
+        .populate('wasteReport')
+        .populate('vendor');
+
+    if (!request) {
+        throw new ApiError(404, 'Request not found');
+    }
+
+    if (!request.wasteReport) {
+        throw new ApiError(404, 'Associated waste report not found');
+    }
+
+    // Validate collector assignment
+    if (request.collector.toString() !== req.user._id.toString()) {
+        throw new ApiError(403, 'Not authorized to collect this pickup');
+    }
+
+    // Check proximity to pickup location (50 meters)
+    const distance = calculateDistance(
+        currentLocation,
+        request.wasteReport.coordinates.coordinates
+    );
+
+    if (distance > 50) {
+        throw new ApiError(400, 'You must be within 50 meters to mark as collected');
+    }
+
+    // Update waste report status and add collection timestamp
+    const updatedWasteReport = await WasteReport.findByIdAndUpdate(
+        request.wasteReport._id,
+        {
+            status: 'in_transit',
+            collectionTimestamp: new Date(),
+            collectedBy: req.user._id
+        },
+        { new: true }
+    );
+
+    // Update request status
+    await WasteProcessingRequest.findByIdAndUpdate(
+        requestId,
+        {
+            status: 'in_transit',
+            collectionDetails: {
+                timestamp: new Date(),
+                location: {
+                    type: 'Point',
+                    coordinates: currentLocation
+                }
+            }
+        }
+    );
+
+    return res.status(200).json(
+        new ApiResponse(200, 
+            { 
+                wasteReport: updatedWasteReport,
+                nextDestination: request.vendor?.processingFacilityLocation
+            }, 
+            'Pickup marked as collected successfully'
+        )
+    );
+});
 
 // Mark delivery as completed
 const markAsDelivered = async (req, res, next) => {

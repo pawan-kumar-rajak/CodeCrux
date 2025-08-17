@@ -14,7 +14,13 @@ import {
     getAdminDashboard,
     getAdminProfile,
     getCollectors,
-    getCollectorDetails
+    getCollectorDetails,
+    createBin,
+    getReportDetails,
+    getAllResidents,
+    getAllVendors,
+    getResidentDetails,
+    getVendorDetails
 } from "../controllers/admin.controller.js";
 
 
@@ -33,7 +39,12 @@ router.get("/get_expired_requests", verifyJWT, getExpiredRequests);
 router.post("/handle_expired_request", verifyJWT, handleExpiredRequest);
 router.get("/get_collectors", verifyJWT, getCollectors);
 router.get("/get_collector/:collectorId", verifyJWT, getCollectorDetails);
-
+router.get("/get_resident/:ResidentId", verifyJWT, getResidentDetails);
+router.get("/get_vendor/:VendorId", verifyJWT, getVendorDetails);
+router.post("/create-bin",verifyJWT,createBin);
+router.get("/report-details/:reportId", verifyJWT, getReportDetails);
+router.get("/get_all_residents", verifyJWT, getAllResidents);
+router.get("/get_all_vendors", verifyJWT, getAllVendors);
 
 
 export default router;

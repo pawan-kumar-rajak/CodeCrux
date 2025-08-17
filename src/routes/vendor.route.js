@@ -10,6 +10,7 @@ import {
     getVendorDashboard,
     rejectWasteRequest,
     viewGarbageDetails,
+    markProcessingComplete
 
 } from "../controllers/vendor.controller.js";
 import { verifyJWT } from "../middlewares/Auth.middleware.js";
@@ -28,4 +29,5 @@ router.get("/get_vendor_dashboard", verifyJWT, getVendorDashboard);
 router.post("/reject_waste_request", verifyJWT, rejectWasteRequest);
 
 router.get("/view_garbage_details/:garbageId", verifyJWT, viewGarbageDetails);
+router.post("/mark_processing_complete", verifyJWT, markProcessingComplete);
 export default router;

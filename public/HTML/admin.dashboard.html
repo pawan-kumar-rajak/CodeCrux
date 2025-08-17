@@ -7,6 +7,8 @@
   <title>Admin Dashboard | CleanCity</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <!-- Link to your CSS file -->
   <link rel="stylesheet" href="/public/CSS/admin.dashboard.css">
 </head>
 
@@ -17,261 +19,91 @@
       <div class="sidebar-header">
         <h2><i class="fas fa-recycle"></i> CleanCity</h2>
       </div>
-      <nav class="nav-menu" onclick="window.location.href='#reports-section'">
-        <div class="nav-item active">
+      <nav class="nav-menu">
+        <div class="nav-item active" data-section="dashboard">
           <i class="fas fa-tachometer-alt"></i>
           <span>Dashboard</span>
         </div>
-        <div class="nav-item">
-          <!-- <i class="fas fa-trash"></i> -->
-          <!-- <span>Waste Reports</span> -->
+        <div class="nav-item" data-section="reports">
+          <i class="fas fa-trash"></i>
+          <span>Waste Reports</span>
         </div>
-        <div class="nav-item">
-          <!-- <i class="fas fa-users"></i> -->
-          <!-- <span>Users</span> -->
-        </div>
-        <div class="nav-item">
+        <div class="nav-item" data-section="collectors">
           <i class="fas fa-truck"></i>
           <span>Collectors</span>
         </div>
-        <div class="nav-item">
-          <!-- <i class="fas fa-chart-bar"></i> -->
-          <!-- <span>Analytics</span> -->
+        <div class="nav-item" data-section="users">
+          <i class="fas fa-users"></i>
+          <span>Users</span>
         </div>
-        <div class="nav-item">
-          <!-- <i class="fas fa-cog"></i> -->
-          <!-- <span>Settings</span> -->
+        <div class="nav-item" data-section="vendors">
+          <i class="fas fa-industry"></i>
+          <span>Vendors</span>
+        </div>
+        <div class="nav-item" data-section="settings">
+          <i class="fas fa-cog"></i>
+          <span>Settings</span>
+        </div>
+        <div class="nav-item" data-section="logout" onclick="logoutUser()">
+          <i class="fas fa-sign-out-alt"></i>
+          <span>Logout</span>
         </div>
       </nav>
     </aside>
 
     <!-- Main Content -->
     <main class="main-content">
+      <!-- Content will be dynamically loaded here by JavaScript -->
       <header class="content-header">
         <h1>Admin Dashboard</h1>
         <div class="user-profile">
-          <div class="user-avatar">CC</div>
+          <div class="user-avatar" id="adminAvatar">CC</div>
           <div class="user-info">
-            <span class="user-name">Code Crux</span>
+            <span class="user-name" id="adminName">Admin User</span>
             <span class="user-role">Admin</span>
           </div>
         </div>
       </header>
 
       <!-- Stats Cards -->
-      <div class="stats-container">
+      <div class="stats-container" id="dashboardStats">
         <div class="stat-card">
           <h3>Total Reports</h3>
-          <div class="stat-value">0</div>
+          <div class="stat-value" id="totalReports">0</div>
         </div>
         <div class="stat-card">
-          <h3>Pending Approval(unidentified)</h3>
-          <div class="stat-value">0</div>
+          <h3>Pending Approval</h3>
+          <div class="stat-value" id="pendingApproval">0</div>
         </div>
         <div class="stat-card">
           <h3>Active Collectors</h3>
-          <div class="stat-value">0</div>
+          <div class="stat-value" id="activeCollectors">0</div>
         </div>
         <div class="stat-card">
           <h3>Registered Users</h3>
-          <div class="stat-value">0</div>
+          <div class="stat-value" id="registeredUsers">0</div>
         </div>
         <div class="stat-card">
-          <h3>Processing Requests</h3>
-          <div class="stat-value">0</div>
+          <h3>Total Requests</h3>
+          <div class="stat-value" id="totalRequests">0</div>
         </div>
         <div class="stat-card">
-          <h3>Pending Garbage (untracked)</h3>
-          <div class="stat-value">0</div>
+          <h3>Expired Requests</h3>
+          <div class="stat-value" id="expiredRequests">0</div>
         </div>
-
       </div>
 
       <!-- Pending Reports Section -->
-      <section class="reports-section" id="reports-section">
+      <section class="reports-section" id="reports-section-content">
         <div class="section-header">
           <h2>Pending Waste Reports</h2>
           <div class="section-actions">
-            <button class="btn btn-outline">
+            <!-- <button class="btn btn-outline">
               <i class="fas fa-filter"></i> Filter
             </button>
             <button class="btn btn-primary">
               <i class="fas fa-download"></i> Export
-            </button>
-          </div>
-        </div>
-
-        <div id="garbageDetailsOverlay" class="overlay">
-          <div class="overlay-content">
-            <span class="close-overlay" aria-label="Close details">&times;</span>
-
-            <div class="garbage-details-container">
-              <!-- Images Section -->
-              <div class="garbage-images">
-                <div id="mainGarbageImage" class="main-image"></div>
-                <div id="garbageThumbnails" class="thumbnails"></div>
-              </div>
-
-              <!-- Details Section -->
-              <div class="garbage-info">
-                <h2>Waste Report Details</h2>
-
-                <div class="detail-row">
-                  <span class="detail-label">Report ID:</span>
-                  <span id="detail-id" class="detail-value"></span>
-                </div>
-
-                <div class="detail-row">
-                  <span class="detail-label">Reported By:</span>
-                  <span id="detail-reportedBy" class="detail-value"></span>
-                </div>
-
-                <div class="detail-row">
-                  <span class="detail-label">Phone:</span>
-                  <span id="detail-phone" class="detail-value"></span>
-                </div>
-
-                <div class="detail-row">
-                  <span class="detail-label">User Reported Type:</span>
-                  <span id="detail-userType" class="detail-value"></span>
-                </div>
-
-                <div class="detail-row">
-                  <span class="detail-label">ML Identified Type:</span>
-                  <span id="detail-mlType" class="detail-value"></span>
-                </div>
-
-                <div class="detail-row">
-                  <span class="detail-label">Weight:</span>
-                  <span id="detail-weight" class="detail-value"></span>
-                </div>
-
-                <div class="detail-row">
-                  <span class="detail-label">Zone:</span>
-                  <span id="detail-zone" class="detail-value"></span>
-                </div>
-
-                <div class="detail-row">
-                  <span class="detail-label">Coordinates:</span>
-                  <span id="detail-coordinates" class="detail-value"></span>
-                </div>
-
-                <div class="detail-row">
-                  <span class="detail-label">Reported On:</span>
-                  <span id="detail-date" class="detail-value"></span>
-                </div>
-
-                <div class="detail-row">
-                  <span class="detail-label">Status:</span>
-                  <span id="detail-status" class="status-badge"></span>
-                </div>
-
-                <div class="detail-row">
-                  <span class="detail-label">Recyclable:</span>
-                  <span id="detail-recyclable" class="detail-value"></span>
-                </div>
-
-                <!-- Waste Type Selection for Approval -->
-                <div class="detail-row">
-                  <span class="detail-label">Update Waste Type:</span>
-                  <select id="wasteTypeSelect" class="detail-value">
-                    <option value="" disabled selected>Select waste type</option>
-                    <option value="plastic">Plastic</option>
-                    <option value="paper">Paper</option>
-                    <option value="metal">Metal</option>
-                    <option value="glass">Glass</option>
-                    <option value="organic">Organic</option>
-                    <option value="E-waste">E-waste</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-
-                <!-- Action Buttons -->
-                <div class="action-buttons">
-                  <button id="acceptBtn" class="btn btn-success" aria-label="Approve report">
-                    <i class="fas fa-check"></i> Approve
-                  </button>
-                  <button id="rejectBtn" class="btn btn-danger" aria-label="Reject report">
-                    <i class="fas fa-times"></i> Reject (Send to Landfill)
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Collectors Details Overlay -->
-        <div id="collectorDetailsOverlay" class="overlay">
-          <div class="overlay-content">
-            <span class="close-overlay">&times;</span>
-
-            <div class="collector-details-container">
-              <!-- Collector Info Section -->
-              <div class="collector-info">
-                <h2>Collector Details</h2>
-
-                <div class="detail-row">
-                  <span class="detail-label">Employee ID:</span>
-                  <span id="collector-employeeId" class="detail-value"></span>
-                </div>
-
-                <div class="detail-row">
-                  <span class="detail-label">Full Name:</span>
-                  <span id="collector-fullName" class="detail-value"></span>
-                </div>
-
-                <div class="detail-row">
-                  <span class="detail-label">Email:</span>
-                  <span id="collector-email" class="detail-value"></span>
-                </div>
-
-                <div class="detail-row">
-                  <span class="detail-label">Assigned Zone:</span>
-                  <span id="collector-zone" class="detail-value"></span>
-                </div>
-
-                <div class="detail-row">
-                  <span class="detail-label">Current Location:</span>
-                  <span id="collector-location" class="detail-value"></span>
-                </div>
-
-                <div class="detail-row">
-                  <span class="detail-label">Assigned Pickups:</span>
-                  <div id="collector-pickups" class="detail-value"></div>
-                </div>
-
-                <div class="detail-row">
-                  <span class="detail-label">Member Since:</span>
-                  <span id="collector-createdAt" class="detail-value"></span>
-                </div>
-              </div>
-
-              <!-- Map Section (optional) -->
-              <div class="collector-map">
-                <div id="collectorMap" style="height: 300px; background: #f5f5f5; border-radius: 8px;">
-                  <!-- Map will be rendered here -->
-                  <p class="map-placeholder">Map loading...</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="action-buttons">
-              <button id="reassignCollectorBtn" class="btn btn-warning">
-                <i class="fas fa-random"></i> Reassign Zone
-              </button>
-              <button id="messageCollectorBtn" class="btn btn-primary">
-                <i class="fas fa-envelope"></i> Send Message
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Loading State (Optional) -->
-        <div id="loadingOverlay" class="overlay" style="display: none;">
-          <div class="overlay-content" style="text-align: center; padding: 40px;">
-            <i class="fas fa-spinner fa-spin fa-3x"></i>
-            <p>Loading report details...</p>
+            </button> -->
           </div>
         </div>
 
@@ -289,14 +121,187 @@
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody>
-
+          <tbody id="pendingReportsTableBody">
+            <!-- Reports will be loaded here by JavaScript -->
           </tbody>
         </table>
       </section>
+
+      <!-- Collectors Section (will be dynamically loaded) -->
+      <section class="collectors-section" id="collectors-section-content" style="display:none;">
+        <!-- Content loaded by JS -->
+      </section>
+
+      <!-- Users Section (will be dynamically loaded) -->
+      <section class="users-section" id="users-section-content" style="display:none;">
+        <!-- Content loaded by JS -->
+      </section>
+
+       <!-- Vendors Section (will be dynamically loaded) -->
+       <section class="vendors-section" id="vendors-section-content" style="display:none;">
+        <!-- Content loaded by JS -->
+      </section>
+
+       <!-- Settings Section (will be dynamically loaded) -->
+       <section class="settings-section" id="settings-section-content" style="display:none;">
+        <!-- Content loaded by JS -->
+      </section>
+
     </main>
   </div>
 
+  <!-- Waste Details Overlay -->
+  <div id="garbageDetailsOverlay" class="overlay">
+    <div class="overlay-content">
+      <span class="close-overlay" id="closeGarbageDetailsOverlay">&times;</span>
+      <div class="garbage-details-container">
+        <!-- Images Section -->
+        <div class="garbage-images">
+          <div id="mainGarbageImage" class="main-image"></div>
+          <div id="garbageThumbnails" class="thumbnails"></div>
+        </div>
+        <!-- Details Section -->
+        <div class="garbage-info">
+          <h2>Waste Report Details</h2>
+          <div class="detail-row"><span class="detail-label">Report ID:</span><span id="detail-id" class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Reported By:</span><span id="detail-reportedBy" class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Phone:</span><span id="detail-phone" class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">User Reported Type:</span><span id="detail-userType" class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">ML Identified Type:</span><span id="detail-mlType" class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Weight:</span><span id="detail-weight" class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Zone:</span><span id="detail-zone" class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Coordinates:</span><span id="detail-coordinates" class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Reported On:</span><span id="detail-date" class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Status:</span><span id="detail-status" class="status-badge"></span></div>
+          <div class="detail-row"><span class="detail-label">Recyclable:</span><span id="detail-recyclable" class="detail-value"></span></div>
+          
+          <!-- ML Details -->
+          <h3>ML Analysis Details</h3>
+          <div class="detail-row"><span class="detail-label">Confidence:</span><span id="detail-confidence" class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Energy Potential:</span><span id="detail-energyPotential" class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">CO2 Reduction:</span><span id="detail-co2Reduction" class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Fraudulent:</span><span id="detail-fraudulent" class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Fraud Score:</span><span id="detail-fraudScore" class="detail-value"></span></div>
+
+          <!-- Waste Type Selection for Approval -->
+          <div class="detail-row">
+            <span class="detail-label">Update Waste Type:</span>
+            <select id="wasteTypeSelect" class="detail-value">
+              <option value="" disabled selected>Select waste type</option>
+              <option value="E-waste">E-waste</option>
+              <option value="automobile wastes">Automobile Wastes</option>
+              <option value="battery waste">Battery Waste</option>
+              <option value="glass waste">Glass Waste</option>
+              <option value="light bulbs">Light Bulbs</option>
+              <option value="metal waste">Metal Waste</option>
+              <option value="organic waste">Organic Waste</option>
+              <option value="paper waste">Paper Waste</option>
+              <option value="plastic waste">Plastic Waste</option>
+            </select>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="action-buttons">
+            <button id="approveBtn" class="btn btn-success" aria-label="Approve report">
+              <i class="fas fa-check"></i> Approve
+            </button>
+            <button id="rejectBtn" class="btn btn-danger" aria-label="Reject report">
+              <i class="fas fa-times"></i> Reject (Send to Landfill)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collector Details Overlay -->
+  <div id="collectorDetailsOverlay" class="overlay">
+    <div class="overlay-content">
+      <span class="close-overlay" id="closeCollectorDetailsOverlay">&times;</span>
+      <div class="collector-details-container">
+        <!-- Collector Info Section -->
+        <div class="collector-info">
+          <h2>Collector Details</h2>
+          <div class="detail-row"><span class="detail-label">Employee ID:</span><span id="collector-employeeId" class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Full Name:</span><span id="collector-fullName" class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Email:</span><span id="collector-email" class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Assigned Zone:</span><span id="collector-zone" class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Current Location:</span><span id="collector-location" class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Assigned Pickups:</span><div id="collector-pickups" class="detail-value"></div></div>
+          <div class="detail-row"><span class="detail-label">Member Since:</span><span id="collector-createdAt" class="detail-value"></span></div>
+        </div>
+        <!-- Map Section (optional) -->
+        <div class="collector-map">
+          <div id="collectorMap" style="height: 300px; background: #f5f5f5; border-radius: 8px;">
+            <p class="map-placeholder">Map loading...</p>
+          </div>
+        </div>
+      </div>
+      <!-- Action Buttons -->
+      <div class="action-buttons">
+        <button id="reassignCollectorBtn" class="btn btn-warning">
+          <i class="fas fa-random"></i> Reassign Zone
+        </button>
+        <button id="messageCollectorBtn" class="btn btn-primary">
+          <i class="fas fa-envelope"></i> Send Message
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+
+  <div id="vendorDetailsOverlay" class="overlay">
+    <div class="overlay-content">
+      <span class="close-overlay" id="closeVendorDetailsOverlay">&times;</span>
+      <div class="collector-details-container">
+        <!-- Collector Info Section -->
+        <div class="collector-info">
+          <h2>Vendor Details</h2>
+          <div class="detail-row"><span class="detail-label">ID:</span><span id="vendor-employeeId" class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">company Name:</span><span id="vendor-companyName" class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">licenseNo:</span><span id="vendor-licenseNo" class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Email:</span><span id="vendor-email" class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">address:</span><span id="vendor-address" class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">processing Method:</span><span id="vendor-processingMethod" class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Current Location:</span><span id="vendor-location" class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">certifications:</span><div id="vendor-certifications" class="detail-value"></div></div>
+          <div class="detail-row"><span class="detail-label">Member Since:</span><span id="vendor-createdAt" class="detail-value"></span></div>
+        </div>
+        <!-- Map Section (optional) -->
+        <div class="vendor-map">
+          <div id="vendorMap" style="height: 300px; background: #f5f5f5; border-radius: 8px;">
+            <p class="map-placeholder">Map loading...</p>
+          </div>
+        </div>
+      </div>
+      <!-- Action Buttons -->
+      <!-- <div class="action-buttons">
+        <button id="reassignCollectorBtn" class="btn btn-warning">
+          <i class="fas fa-random"></i> Reassign Zone
+        </button> -->
+        <button id="messageVendorBtn" class="btn btn-primary">
+          <i class="fas fa-envelope"></i> Send Message
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- Loading State (Optional) -->
+  <div id="loadingOverlay" class="overlay" style="display: none;">
+    <div class="overlay-content" style="text-align: center; padding: 40px;">
+      <i class="fas fa-spinner fa-spin fa-3x"></i>
+      <p>Loading...</p>
+    </div>
+  </div>
+
+  <!-- Snackbar for notifications -->
+  <div id="snackbar"></div>
+
+  <!-- Link to your JavaScript file -->
+   <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
   <script src="/public/JS/admin.dashboard.js"></script>
 </body>
 

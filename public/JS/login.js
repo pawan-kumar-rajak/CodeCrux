@@ -125,8 +125,8 @@ document.addEventListener('DOMContentLoaded', function() {
     function getLoginEndpoint(userType) {
         const endpoints = {
             'resident': '/api/v1/residents/login',
-            'collector': '/api/v1/collectors/login',
-            'vendor': '/api/v1/vendors/login',
+            'collector': '/api/v1/collector/login',
+            'vendor': '/api/v1/vendor/login',
             'admin': '/api/v1/admin/login'
         };
         return endpoints[userType] || '/api/v1/residents/login';

@@ -1,294 +1,452 @@
+// Utility function for Snackbar notifications
+function showSnackbar(message, type = 'success') {
+    const snackbar = document.getElementById('snackbar');
+    if (!snackbar) {
+        // Create snackbar element if it doesn't exist
+        const newSnackbar = document.createElement('div');
+        newSnackbar.id = 'snackbar';
+        document.body.appendChild(newSnackbar);
+        // Add basic styling for snackbar (can be moved to CSS)
+        const style = document.createElement('style');
+        style.textContent = `
+            #snackbar {
+                visibility: hidden;
+                min-width: 250px;
+                background-color: #333;
+                color: #fff;
+                text-align: center;
+                border-radius: 4px;
+                padding: 16px;
+                position: fixed;
+                z-index: 1000;
+                right: 30px;
+                bottom: 30px;
+                font-size: 14px;
+                transition: all 0.5s ease-in-out;
+                opacity: 0;
+            }
+            #snackbar.show {
+                visibility: visible;
+                opacity: 1;
+                bottom: 50px;
+            }
+            #snackbar.success { background-color: #4CAF50; }
+            #snackbar.error { background-color: #f44336; }
+            #snackbar.info { background-color: #2196F3; }
+        `;
+        document.head.appendChild(style);
+        return showSnackbar(message, type); // Call itself once style is added
+    }
+
+    snackbar.className = `show ${type}`;
+    snackbar.textContent = message;
+
+    setTimeout(() => {
+        snackbar.className = snackbar.className.replace('show', '');
+    }, type === 'error' ? 5000 : 3000);
+}
+
+// Global variable to store the ID of the report currently being viewed
+let currentReportId = null;
+let currentCollectorId = null;
 
 document.addEventListener('DOMContentLoaded', async function() {
-    // Load admin profile
+    // Load admin profile and dashboard stats initially
     await loadAdminProfile();
-    
-    // Load dashboard stats
     await loadDashboardStats();
     
-    // Load pending reports
-    await loadPendingReports();
+    // Setup navigation event listeners
+    setupNavigation();
     
-    // Setup event listeners (including overlay)
-    setupEventListeners();
-    
-    // Make sure overlay exists but is hidden initially
-    const overlay = document.getElementById('garbageDetailsOverlay');
-    if (!overlay) {
-        // Create overlay if it doesn't exist
-        const overlayHTML = `
-            <div id="garbageDetailsOverlay" class="overlay">
-                <div class="overlay-content"></div>
-            </div>
-        `;
-        document.body.insertAdjacentHTML('beforeend', overlayHTML);
-    } else {
-        overlay.style.display = 'none';
-    }
-});
-    async function loadAdminProfile() {
-      try {
+    // Load default section content (Dashboard or Waste Reports)
+    // Based on your HTML, 'Waste Reports' is the initial visible section
+    await loadSectionContent('Dashboard'); // Load dashboard content first
+    await loadSectionContent('Waste Reports'); // Then load reports to populate the table
 
+    // Setup overlay event listeners
+    setupOverlayEventListeners();
+});
+
+async function loadAdminProfile() {
+    try {
         const response = await fetch('http://localhost:5000/api/v1/admin/me', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          // body: JSON.stringify({ email, password }),
-          credentials: 'include' // Important for cookies
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include'
         });
 
         if (!response.ok) {
-          throw new Error('Failed to fetch admin profile');
+            throw new Error('Failed to fetch admin profile');
         }
 
         const data = await response.json();
         const adminUser = data.data.user;
 
-        // Update UI
-        document.querySelector('.user-name').textContent = adminUser.fullName;
-        document.querySelector('.user-avatar').textContent =
-          adminUser.fullName.split(' ').map(n => n[0]).join('');
+        document.getElementById('adminName').textContent = adminUser.fullName;
+        document.getElementById('adminAvatar').textContent = adminUser.fullName.split(' ').map(n => n[0]).join('');
 
-      } catch (error) {
+    } catch (error) {
         console.error('Error loading admin profile:', error);
-        alert('Session expired. Please login again.');
-        window.location.href = '/resident/login';
-      }
+        showSnackbar('Session expired or failed to load profile. Please login again.', 'error');
+        setTimeout(() => { window.location.href = '/resident/login'; }, 1500); // Redirect to login
     }
+}
 
-    async function loadDashboardStats() {
-      try {
+async function loadDashboardStats() {
+    try {
         const response = await fetch('http://localhost:5000/api/v1/admin/get_admin_dashboard', {
-          credentials: 'include'
+            credentials: 'include'
         });
 
         if (!response.ok) {
-          throw new Error('Failed to fetch dashboard stats');
+            throw new Error('Failed to fetch dashboard stats');
         }
 
         const data = await response.json();
         const stats = data.data;
 
-        // Update stats cards
-        document.querySelector('.stat-card:nth-child(1) .stat-value').textContent = stats.totalReports || 0;
-        document.querySelector('.stat-card:nth-child(2) .stat-value').textContent = stats.pendingApproval || 0;
-        document.querySelector('.stat-card:nth-child(3) .stat-value').textContent = stats.activeCollectors || 0;
-        document.querySelector('.stat-card:nth-child(4) .stat-value').textContent = stats.registeredUsers || 0;
-        document.querySelector('.stat-card:nth-child(5) .stat-value').textContent = stats.totalRequests || 0;
-        document.querySelector('.stat-card:nth-child(6) .stat-value').textContent = stats.pendingApproval || 0;
+        document.getElementById('totalReports').textContent = stats.totalReports || 0;
+        document.getElementById('pendingApproval').textContent = stats.pendingApproval || 0;
+        document.getElementById('activeCollectors').textContent = stats.activeCollectors || 0;
+        document.getElementById('registeredUsers').textContent = stats.registeredUsers || 0;
+        document.getElementById('totalRequests').textContent = stats.totalRequests || 0;
+        document.getElementById('expiredRequests').textContent = stats.expiredRequests || 0;
 
-      } catch (error) {
+    } catch (error) {
         console.error('Error loading dashboard stats:', error);
-        // You might want to show a more user-friendly error message
-      }
+        showSnackbar('Error loading dashboard statistics.', 'error');
     }
+}
 
-    async function loadPendingReports() {
-      try {
+async function loadPendingReports() {
+    showLoadingOverlay('Loading pending waste reports...');
+    try {
         const response = await fetch('http://localhost:5000/api/v1/admin/get_all_pending_waste_reports', {
-          credentials: 'include'
+            credentials: 'include'
         });
 
         if (!response.ok) {
-          throw new Error('Failed to fetch pending reports');
+            throw new Error('Failed to fetch pending reports');
         }
 
         const data = await response.json();
         const reports = data.data;
 
-        console.log("reports: ", reports)
+        const tbody = document.getElementById('pendingReportsTableBody');
+        tbody.innerHTML = ''; // Clear existing rows
 
-        // Clear existing table rows (except header)
-        const tbody = document.querySelector('table tbody');
-        tbody.innerHTML = '';
+        if (reports.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 20px;">No pending waste reports for review.</td></tr>';
+        } else {
+            reports.forEach(report => {
+                const row = document.createElement('tr');
+                const photoUrl = report.photoUrl && report.photoUrl.length > 0 ? report.photoUrl[0] : 'https://placehold.co/50x50/cccccc/000000?text=No+Image';
 
-        // Add new rows
-        reports.forEach(report => {
-          const row = document.createElement('tr');
-
-          row.innerHTML = `
-                <td>${report._id}</td>
-                <td><img src="${report.photoUrl[0]}" class="report-image"></td>
-                <td>
-                    <div>${report?.reportedBy?.fullName}</div>
-                    <small>${report?.reportedBy?.email}</small>
-                </td>
-                <td>${report.userReportedType}</td>
-                <td>${report.mlIdentifiedType}</td>
-                <td>${report.approximateWeight}</td>
-                <td>${report.assignedZone}</td>
-                <td><span class="status-badge status-${report.status}">${report.status}</span></td>
-                <td>
-                    <button class="action-btn approve-btn" data-id="${report._id}" title="Approve">
-                        <i class="fas fa-check"></i>
-                    </button>
-                    <button class="action-btn reject-btn" data-id="${report._id}" title="Reject">
-                        <i class="fas fa-times"></i>
-                    </button>
-                    <button class="action-btn view-btn" data-id="${report._id}" title="View Details">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                </td>
-            `;
-
-          tbody.appendChild(row);
-        });
-
-      } catch (error) {
+                row.innerHTML = `
+                    <td>${report._id.substring(0, 8)}...</td>
+                    <td><img src="${photoUrl}" alt="Waste Image" class="report-image" onerror="this.onerror=null;this.src='https://placehold.co/50x50/cccccc/000000?text=No+Image';"></td>
+                    <td>
+                        <div>${report.reportedBy?.fullName || 'N/A'}</div>
+                        <small>${report.reportedBy?.email || 'N/A'}</small>
+                    </td>
+                    <td>${report.userReportedType || 'N/A'}</td>
+                    <td>${report.mlIdentifiedType || 'N/A'}</td>
+                    <td>${report.approximateWeight || 'N/A'}</td>
+                    <td>${report.assignedZone || 'N/A'}</td>
+                    <td><span class="status-badge status-${report.status}">${report.status}</span></td>
+                    <td>
+                        <button class="action-btn view-btn" data-id="${report._id}" title="View Details">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+    } catch (error) {
         console.error('Error loading pending reports:', error);
-      }
+        showSnackbar('Error loading pending reports.', 'error');
+    } finally {
+        hideLoadingOverlay();
     }
+}
 
-    function setupEventListeners() {
-      // Handle approve/reject/view buttons
-      document.addEventListener('click', async function (e) {
-        if (e.target.closest('.approve-btn')) {
-          const reportId = e.target.closest('.approve-btn').dataset.id;
-          await updateReportStatus(reportId, 'approved');
-        }
-
-        if (e.target.closest('.reject-btn')) {
-          const reportId = e.target.closest('.reject-btn').dataset.id;
-          await updateReportStatus(reportId, 'rejected');
-        }
-
-        if (e.target.closest('.view-btn')) {
-          const reportId = e.target.closest('.view-btn').dataset.id;
-          viewReportDetails(reportId);
-        }
-      });
-
-      // Nav menu items
-      document.querySelectorAll('.nav-item').forEach(item => {
-        item.addEventListener('click', function () {
-          document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-          this.classList.add('active');
-
-          // You would load different content based on which nav item was clicked
-          const navText = this.querySelector('span').textContent;
-          console.log(`Loading ${navText} section...`);
+function setupNavigation() {
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', async function() {
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            this.classList.add('active');
+            
+            const sectionName = this.dataset.section; // Use data-section attribute
+            await loadSectionContent(sectionName);
         });
-      });
+    });
+}
+
+async function loadSectionContent(sectionName) {
+    const mainContent = document.querySelector('.main-content');
+    const dashboardStats = document.getElementById('dashboardStats');
+    const reportsSection = document.getElementById('reports-section-content');
+    const collectorsSection = document.getElementById('collectors-section-content');
+    const usersSection = document.getElementById('users-section-content');
+    const vendorsSection = document.getElementById('vendors-section-content');
+    const settingsSection = document.getElementById('settings-section-content');
+
+    // Hide all sections first
+    dashboardStats.style.display = 'none';
+    reportsSection.style.display = 'none';
+    collectorsSection.style.display = 'none';
+    usersSection.style.display = 'none';
+    vendorsSection.style.display = 'none';
+    settingsSection.style.display = 'none';
+
+    // Update header based on section
+    mainContent.querySelector('.content-header h1').textContent = sectionName.charAt(0).toUpperCase() + sectionName.slice(1) + ' Management';
+
+    switch(sectionName) {
+        case 'dashboard':
+            dashboardStats.style.display = 'grid'; // Display as grid
+            reportsSection.style.display = 'block'; // Keep reports visible on dashboard for quick access
+            mainContent.querySelector('.content-header h1').textContent = 'Admin Dashboard'; // Specific title for dashboard
+            await loadDashboardStats();
+            await loadPendingReports(); // Refresh pending reports on dashboard view
+            break;
+        case 'reports':
+            reportsSection.style.display = 'block';
+            await loadPendingReports();
+            break;
+        case 'collectors':
+            collectorsSection.style.display = 'block';
+            collectorsSection.innerHTML = `
+                <div class="section-header">
+                    <h2>Active Collectors</h2>
+                    <div class="section-actions">
+                        <button class="btn btn-primary" id="addCollectorBtn">
+                            <i class="fas fa-plus"></i> Add Collector
+                        </button>
+                    </div>
+                </div>
+                <table id="collectorsTable">
+                    <thead>
+                        <tr>
+                            <th>Employee ID</th>
+                            <th>Collector</th>
+                            <th>Email</th>
+                            <th>Zone</th>
+                            <th>Pickups</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="collectorsList">
+                        <!-- Will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            `;
+            await loadCollectors();
+            setupCollectorsEventListeners();
+            break;
+        case 'users':
+            usersSection.style.display = 'block';
+            usersSection.innerHTML = `
+                <div class="section-header">
+                    <h2>Registered Residents</h2>
+                </div>
+                <table id="usersTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Rewards</th>
+                            <th>Report Count</th>
+                            <!-- <th>Actions</th> -->
+                        </tr>
+                    </thead>
+                    <tbody id="usersList">
+                        <!-- Will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            `;
+            await loadUsers();
+            break;
+        case 'vendors':
+            vendorsSection.style.display = 'block';
+            vendorsSection.innerHTML = `
+                <div class="section-header">
+                    <h2>Registered Vendors</h2>
+                    <div class="section-actions">
+                        <button class="btn btn-primary" id="addVendorBtn">
+                            <i class="fas fa-plus"></i> Add Vendor
+                        </button>
+                    </div>
+                </div>
+                <table id="vendorsTable">
+                    <thead>
+                        <tr>
+                            <th>Company Name</th>
+                            <th>License No.</th>
+                            <th>Email</th>
+                            <th>Waste Types</th>
+                            <th>Processed (kg)</th>
+                            <th>Energy (kWh)</th>
+                            <th>CO2 Reduced (kg)</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="vendorsList">
+                        <!-- Will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            `;
+            await loadVendors();
+            setupVendorsEventListeners();
+            break;
+        case 'settings':
+            settingsSection.style.display = 'block';
+            settingsSection.innerHTML = `
+                <div class="section-header">
+                    <h2>Settings</h2>
+                </div>
+                <p>Settings content goes here...</p>
+            `;
+            break;
+        case 'logout':
+            // Logout is handled by the onclick in HTML, no content to load here
+            break;
+        default:
+            console.warn('Unknown section:', sectionName);
+            break;
+    }
+}
+
+// Event listeners for action buttons on reports table
+document.addEventListener('click', async function (e) {
+    if (e.target.closest('.view-btn')) {
+        const reportId = e.target.closest('.view-btn').dataset.id;
+        await viewReportDetails(reportId);
+    }
+});
+
+// Setup overlay event listeners (for garbageDetailsOverlay)
+function setupOverlayEventListeners() {
+    document.getElementById('closeGarbageDetailsOverlay').addEventListener('click', () => {
+        document.getElementById('garbageDetailsOverlay').style.display = 'none';
+    });
+
+    document.getElementById('approveBtn').addEventListener('click', approveReport);
+    document.getElementById('rejectBtn').addEventListener('click', rejectReport);
+
+    document.getElementById('garbageDetailsOverlay').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('garbageDetailsOverlay')) {
+            document.getElementById('garbageDetailsOverlay').style.display = 'none';
+        }
+    });
+
+    // Setup collector details overlay close button
+    document.getElementById('closeCollectorDetailsOverlay').addEventListener('click', () => {
+        document.getElementById('collectorDetailsOverlay').style.display = 'none';
+    });
+
+    document.getElementById('collectorDetailsOverlay').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('collectorDetailsOverlay')) {
+            document.getElementById('collectorDetailsOverlay').style.display = 'none';
+        }
+    });
+
+    document.getElementById('closeVendorDetailsOverlay').addEventListener('click', () => {
+        document.getElementById('vendorDetailsOverlay').style.display = 'none';
+    });
+
+    document.getElementById('vendorDetailsOverlay').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('vendorDetailsOverlay')) {
+            document.getElementById('vendorDetailsOverlay').style.display = 'none';
+        }
+    });
+}
+
+// Approve Report function
+async function approveReport() {
+    const wasteTypeSelect = document.getElementById('wasteTypeSelect');
+    const wasteType = wasteTypeSelect.value;
+
+    if (!wasteType) {
+        showSnackbar('Please select a waste type before approving.', 'error');
+        return;
     }
 
-    // Update the approve/reject functions
-async function approveReport() {
-    const wasteType = document.getElementById('wasteTypeSelect').value;
-    
-    try {   
+    if (!confirm(`Are you sure you want to approve this report as ${wasteType}?`)) {
+        return;
+    }
+
+    showLoadingOverlay('Approving report...');
+    try {
         const response = await fetch('http://localhost:5000/api/v1/admin/approve_waste_report', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                reportId: currentReportId,
-                wasteType: wasteType
-            }),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reportId: currentReportId, wasteType: wasteType }),
             credentials: 'include'
         });
 
         if (!response.ok) {
-            throw new Error('Failed to approve report');
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to approve report');
         }
 
-        const data = await response.json();
-        alert('Report approved successfully!');
-        
-        // Refresh the dashboard
-        await loadPendingReports();
-        await loadDashboardStats();
-        
-        // Close overlay
+        showSnackbar('Report approved successfully!', 'success');
         document.getElementById('garbageDetailsOverlay').style.display = 'none';
-
+        await loadPendingReports(); // Refresh pending reports table
+        await loadDashboardStats(); // Refresh dashboard stats
     } catch (error) {
         console.error('Error approving report:', error);
-        showSnackbar(error.message,"error")
-        // alert(error.message);
+        showSnackbar(error.message, 'error');
+    } finally {
+        hideLoadingOverlay();
     }
 }
 
+// Reject Report function
 async function rejectReport() {
     if (!confirm('Are you sure you want to reject this report and send it to landfill?')) {
         return;
     }
 
+    showLoadingOverlay('Rejecting report and assigning to collector...');
     try {
         const response = await fetch('http://localhost:5000/api/v1/admin/reject_waste_report', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                reportId: currentReportId
-            }),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reportId: currentReportId }),
             credentials: 'include'
         });
 
         if (!response.ok) {
-            throw new Error('Failed to reject report');
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to reject report');
         }
 
-        const data = await response.json();
-        alert('Report rejected and assigned to collector!');
-        
-        // Refresh the dashboard
-        await loadPendingReports();
-        await loadDashboardStats();
-        
-        // Close overlay
+        showSnackbar('Report rejected and assigned to collector!', 'success');
         document.getElementById('garbageDetailsOverlay').style.display = 'none';
-
+        await loadPendingReports(); // Refresh pending reports table
+        await loadDashboardStats(); // Refresh dashboard stats
     } catch (error) {
         console.error('Error rejecting report:', error);
-        alert(error.message);
+        showSnackbar(error.message, 'error');
+    } finally {
+        hideLoadingOverlay();
     }
 }
 
-// Update the setupOverlayEventListeners function
-function setupOverlayEventListeners() {
-    // Close button
-    document.querySelector('.close-overlay')?.addEventListener('click', () => {
-        document.getElementById('garbageDetailsOverlay').style.display = 'none';
-    });
-
-    // Accept button
-    document.getElementById('acceptBtn')?.addEventListener('click', approveReport);
-
-    // Reject button
-    document.getElementById('rejectBtn')?.addEventListener('click', rejectReport);
-
-    // Close when clicking outside content
-    document.getElementById('garbageDetailsOverlay')?.addEventListener('click', (e) => {
-        if (e.target === document.getElementById('garbageDetailsOverlay')) {
-            document.getElementById('garbageDetailsOverlay').style.display = 'none';
-        }
-    });
-}
-
-    // Add these variables at the top
-    let currentReportId = null;
-
-    // Update the viewReportDetails function
-    async function viewReportDetails(reportId) {
+// View Report Details function
+async function viewReportDetails(reportId) {
     currentReportId = reportId;
+    showLoadingOverlay('Loading report details...');
     try {
-        // Show overlay with loading state
-        const overlay = document.getElementById('garbageDetailsOverlay');
-        overlay.style.display = 'block';
-        overlay.querySelector('.overlay-content').innerHTML = `
-            <div style="padding: 20px; text-align: center;">
-                <i class="fas fa-spinner fa-spin" style="font-size: 24px;"></i>
-                <p>Loading report details...</p>
-            </div>
-        `;
-
-        // Fetch report details
-        const response = await fetch(`http://localhost:5000/api/v1/vendor/view_garbage_details/${reportId}`, {
+        const response = await fetch(`http://localhost:5000/api/v1/admin/report-details/${reportId}`, {
             credentials: 'include'
         });
+
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -300,292 +458,95 @@ function setupOverlayEventListeners() {
             throw new Error(result.message || 'Invalid response data');
         }
 
-        populateOverlay(result.data);
-        
+        populateGarbageDetailsOverlay(result.data);
+        document.getElementById('garbageDetailsOverlay').style.display = 'flex'; // Show overlay
     } catch (error) {
         console.error('Error fetching report details:', error);
-        const overlayContent = document.querySelector('.overlay-content');
-        if (overlayContent) {
-            overlayContent.innerHTML = `
-                <div style="padding: 20px; text-align: center;">
-                    <i class="fas fa-exclamation-triangle" style="color: #dc3545; font-size: 24px;"></i>
-                    <p>Error loading report details</p>
-                    <p>${error.message}</p>
-                    <button onclick="document.getElementById('garbageDetailsOverlay').style.display='none'" 
-                            style="padding: 8px 16px; background: #f0f0f0; border: none; border-radius: 4px; cursor: pointer;">
-                        Close
-                    </button>
-                </div>
-            `;
-        }
+        showSnackbar(`Error loading report details: ${error.message}`, 'error');
+    } finally {
+        hideLoadingOverlay();
     }
 }
-function populateOverlay(report) {
-    const overlay = document.getElementById('garbageDetailsOverlay');
-    if (!overlay) {
-        console.error('Overlay element not found');
-        return;
-    }
+
+function populateGarbageDetailsOverlay(reportData) {
+    const report = reportData.wasteReport; // Extract wasteReport object
+    const mlDetails = report.mlDetails || {};
+    const reportedBy = reportData.resident; // Extract resident object
 
     // Format date
     const reportDate = new Date(report.createdAt);
     const formattedDate = reportDate.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+        year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
     
     // Format coordinates
     const coordinates = report.coordinates?.coordinates || [0, 0];
     const formattedCoords = `${coordinates[1]?.toFixed(6) || 'N/A'}, ${coordinates[0]?.toFixed(6) || 'N/A'}`;
     
-    // Create the overlay content HTML
-    const overlayContent = `
-        <span class="close-overlay">&times;</span>
-        
-        <div class="garbage-details-container">
-            <!-- Images Section -->
-            <div class="garbage-images">
-                <div id="mainGarbageImage" class="main-image" 
-                     style="background-image: url('${report.photoUrl?.[0] || ''}')"></div>
-                <div id="garbageThumbnails" class="thumbnails">
-                    ${(report.photoUrl || []).map((url, index) => `
-                        <img src="${url}" class="thumbnail-img ${index === 0 ? 'active' : ''}" 
-                             onclick="switchMainImage('${url}', this)">
-                    `).join('')}
-                </div>
-            </div>
-            
-            <!-- Details Section -->
-            <div class="garbage-info">
-                <h2>Waste Report Details</h2>
-                
-                ${[
-                    ['Report ID', report._id || 'N/A'],
-                    ['Reported By', report.reportedBy?.fullName || 'N/A'],
-                    ['Phone', report.reportedBy?.phoneNo || 'N/A'],
-                    ['User Reported Type', report.userReportedType || 'N/A'],
-                    ['ML Identified Type', report.mlIdentifiedType || 'N/A'],
-                    ['Weight', `${report.approximateWeight || 'N/A'} kg`],
-                    ['Zone', report.assignedZone || 'N/A'],
-                    ['Coordinates', formattedCoords],
-                    ['Reported On', formattedDate],
-                    ['Status', `<span class="status-badge status-${report.status || 'unknown'}">${report.status || 'unknown'}</span>`],
-                    ['Recyclable', report.mlDetails?.isRecyclable ? 'Yes' : 'No']
-                ].map(([label, value]) => `
-                    <div class="detail-row">
-                        <span class="detail-label">${label}:</span>
-                        <span class="detail-value">${value}</span>
-                    </div>
-                `).join('')}
-                
-                <!-- Waste Type Selection for Approval -->
-                <div class="detail-row">
-                    <span class="detail-label">Confirm Waste Type:</span>
-                    <select id="wasteTypeSelect" class="detail-value">
-                        <option value="" disabled selected>Select correct type</option>
-                        <option value="plasti waste" ${report.mlIdentifiedType === 'plastic waste' ? 'selected' : ''}>Plastic</option>
-                        <option value="paper waste" ${report.mlIdentifiedType === 'paper waste' ? 'selected' : ''}>Paper</option>
-                        <option value="metal waste" ${report.mlIdentifiedType === 'metal waste' ? 'selected' : ''}>Metal</option>
-                        <option value="glass waste" ${report.mlIdentifiedType === 'glass waste' ? 'selected' : ''}>Glass</option>
-                        <option value="organic waste" ${report.mlIdentifiedType === 'organic waste' ? 'selected' : ''}>Organic</option>
-                        <option value="E-waste" ${report.mlIdentifiedType === 'E-waste' ? 'selected' : ''}>E-waste</option>
-                        <option value="other">Other</option>
-                    </select>
-                </div>
-                
-                <!-- Action Buttons -->
-                <div class="action-buttons">
-                    <button id="acceptBtn" class="btn btn-success">
-                        <i class="fas fa-check"></i> Approve
-                    </button>
-                    <button id="rejectBtn" class="btn btn-danger">
-                        <i class="fas fa-times"></i> Reject
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
+    // Update main image and thumbnails
+    const mainImageDiv = document.getElementById('mainGarbageImage');
+    const thumbnailsDiv = document.getElementById('garbageThumbnails');
+    const photoUrls = report.photoUrl || [];
 
-    // Set the content
-    overlay.querySelector('.overlay-content').innerHTML = overlayContent;
+    if (photoUrls.length > 0) {
+        mainImageDiv.style.backgroundImage = `url('${photoUrls[0]}')`;
+        thumbnailsDiv.innerHTML = photoUrls.map((url, index) => `
+            <img src="${url}" class="thumbnail-img ${index === 0 ? 'active' : ''}" 
+                 onclick="switchMainImage('${url}', this)" onerror="this.onerror=null;this.src='https://placehold.co/50x50/cccccc/000000?text=No+Image';">
+        `).join('');
+    } else {
+        mainImageDiv.style.backgroundImage = `url('https://placehold.co/200x200/cccccc/000000?text=No+Image')`;
+        thumbnailsDiv.innerHTML = '';
+    }
+
+    // Populate general details
+    document.getElementById('detail-id').textContent = report._id || 'N/A';
+    document.getElementById('detail-reportedBy').textContent = reportedBy?.fullName || 'N/A';
+    document.getElementById('detail-phone').textContent = reportedBy?.phoneNo || 'N/A';
+    document.getElementById('detail-userType').textContent = report.userReportedType || 'N/A';
+    document.getElementById('detail-mlType').textContent = report.mlIdentifiedType || 'N/A';
+    document.getElementById('detail-weight').textContent = `${report.approximateWeight || 'N/A'} kg`;
+    document.getElementById('detail-zone').textContent = report.assignedZone || 'N/A';
+    document.getElementById('detail-coordinates').textContent = formattedCoords;
+    document.getElementById('detail-date').textContent = formattedDate;
     
-    // Reattach event listeners
-    setupOverlayEventListeners();
+    const statusBadge = document.getElementById('detail-status');
+    statusBadge.textContent = report.status || 'unknown';
+    statusBadge.className = `status-badge status-${report.status || 'unknown'}`;
+    
+    document.getElementById('detail-recyclable').textContent = mlDetails.recyclable ? 'Yes' : 'No';
+
+    // Populate ML analysis details
+    document.getElementById('detail-confidence').textContent = mlDetails.confidence ? `${mlDetails.confidence.toFixed(2)}%` : 'N/A';
+    document.getElementById('detail-energyPotential').textContent = mlDetails.energyPotential ? `${mlDetails.energyPotential.toFixed(2)} kWh` : 'N/A';
+    document.getElementById('detail-co2Reduction').textContent = mlDetails.co2Reduction ? `${mlDetails.co2Reduction.toFixed(2)} kg` : 'N/A';
+    document.getElementById('detail-fraudulent').textContent = mlDetails.fraudDetection?.is_suspicious ? 'Yes' : 'No';
+    document.getElementById('detail-fraudScore').textContent = mlDetails.fraudDetection?.suspicion_score ? mlDetails.fraudDetection.suspicion_score.toFixed(3) : 'N/A';
+
+    // Set selected value for wasteTypeSelect
+    const wasteTypeSelect = document.getElementById('wasteTypeSelect');
+    if (wasteTypeSelect) {
+        const mlType = report.mlIdentifiedType;
+        const options = Array.from(wasteTypeSelect.options);
+        const matchingOption = options.find(option => option.value === mlType);
+        if (matchingOption) {
+            wasteTypeSelect.value = mlType;
+        } else {
+            wasteTypeSelect.value = ''; // Select default "Select correct type"
+        }
+    }
 }
 
-
-// Helper function for image switching
+// Helper function for image switching in overlay
 function switchMainImage(url, element) {
     document.getElementById('mainGarbageImage').style.backgroundImage = `url(${url})`;
     document.querySelectorAll('.thumbnail-img').forEach(img => img.classList.remove('active'));
     element.classList.add('active');
 }
 
-
-    // Add event listeners for overlay
-    document.querySelector('.close-overlay').addEventListener('click', () => {
-      document.getElementById('garbageDetailsOverlay').style.display = 'none';
-    });
-
-    document.getElementById('acceptBtn').addEventListener('click', async () => {
-      await updateReportStatus(currentReportId, 'approved');
-      document.getElementById('garbageDetailsOverlay').style.display = 'none';
-    });
-
-    document.getElementById('rejectBtn').addEventListener('click', async () => {
-      await updateReportStatus(currentReportId, 'rejected');
-      document.getElementById('garbageDetailsOverlay').style.display = 'none';
-    });
-
-    // Close overlay when clicking outside content
-    document.getElementById('garbageDetailsOverlay').addEventListener('click', (e) => {
-      if (e.target === document.getElementById('garbageDetailsOverlay')) {
-        document.getElementById('garbageDetailsOverlay').style.display = 'none';
-      }
-    });
-
-    
-    // Helper function to get cookies
-    function getCookie(name) {
-      const value = `; ${document.cookie}`;
-      const parts = value.split(`; ${name}=`);
-      if (parts.length === 2) return parts.pop().split(';').shift();
-    }
-
-
-    function setupOverlayEventListeners() {
-    // Close button
-    const closeBtn = document.querySelector('.close-overlay');
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => {
-            document.getElementById('garbageDetailsOverlay').style.display = 'none';
-        });
-    }
-
-    // Accept button
-    const acceptBtn = document.getElementById('acceptBtn');
-    if (acceptBtn) {
-        acceptBtn.addEventListener('click', async () => {
-            await approveReport()
-            document.getElementById('garbageDetailsOverlay').style.display = 'none';
-        });
-    }
-
-    // Reject button
-    const rejectBtn = document.getElementById('rejectBtn');
-    if (rejectBtn) {
-        rejectBtn.addEventListener('click', async () => {
-            await rejectReport()
-            document.getElementById('garbageDetailsOverlay').style.display = 'none';
-        });
-    }
-
-    // Close when clicking outside content
-    const overlay = document.getElementById('garbageDetailsOverlay');
-    if (overlay) {
-        overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) {
-                overlay.style.display = 'none';
-            }
-        });
-    }
-}
-
-  
-
-
-
-// Add these variables at the top
-let currentCollectorId = null;
-
-// Add to DOMContentLoaded
-document.addEventListener('DOMContentLoaded', async function() {
-    // ... existing code ...
-    
-    // Setup navigation
-    setupNavigation();
-    
-    // Load initial content based on active nav item
-    const activeNav = document.querySelector('.nav-item.active');
-    if (activeNav) {
-        await loadSectionContent(activeNav.querySelector('span').textContent);
-    }
-});
-
-function setupNavigation() {
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.addEventListener('click', async function() {
-            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-            this.classList.add('active');
-            
-            const sectionName = this.querySelector('span').textContent;
-            await loadSectionContent(sectionName);
-        });
-    });
-}
-
-async function loadSectionContent(sectionName) {
-    const mainContent = document.querySelector('.main-content');
-    
-    switch(sectionName) {
-        case 'Collectors':
-            mainContent.innerHTML = `
-                <header class="content-header">
-                    <h1>Collectors Management</h1>
-                    <div class="user-profile">
-                        <div class="user-avatar">CC</div>
-                        <div class="user-info">
-                            <span class="user-name">Code Crux</span>
-                            <span class="user-role">Admin</span>
-                        </div>
-                    </div>
-                </header>
-                
-                <section class="collectors-section">
-                    <div class="section-header">
-                        <h2>Active Collectors</h2>
-                        <div class="section-actions">
-                            <button class="btn btn-primary" id="addCollectorBtn">
-                                <i class="fas fa-plus"></i> Add Collector
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <table id="collectorsTable">
-                        <thead>
-                            <tr>
-                                <th>Employee ID</th>
-                                <th>Collector</th>
-                                <th>Email</th>
-                                <th>Zone</th>
-                                <th>Pickups</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="collectorsList">
-                            <!-- Will be populated by JavaScript -->
-                        </tbody>
-                    </table>
-                </section>
-            `;
-            
-            await loadCollectors();
-            setupCollectorsEventListeners();
-            break;
-            
-        case 'Waste Reports':
-            // Your existing waste reports content
-            break;
-            
-        // Add cases for other sections
-    }
-}
-
+// --- Collector Management Functions ---
 async function loadCollectors() {
+    showLoadingOverlay('Loading collectors...');
     try {
         const response = await fetch('http://localhost:5000/api/v1/admin/get_collectors', {
             credentials: 'include'
@@ -600,7 +561,9 @@ async function loadCollectors() {
         
     } catch (error) {
         console.error('Error loading collectors:', error);
-        alert('Failed to load collectors. Please try again.');
+        showSnackbar('Failed to load collectors. Please try again.', 'error');
+    } finally {
+        hideLoadingOverlay();
     }
 }
 
@@ -609,26 +572,30 @@ function populateCollectorsTable(collectors) {
     if (!tbody) return;
     
     tbody.innerHTML = '';
-    
+    if (collectors.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">No collectors registered yet.</td></tr>';
+        return;
+    }
+
     collectors.forEach(collector => {
         const row = document.createElement('tr');
-        const initials = collector.fullName.split(' ').map(n => n[0]).join('');
+        const initials = collector.fullName ? collector.fullName.split(' ').map(n => n[0]).join('') : 'N/A';
         
         row.innerHTML = `
-            <td>${collector.employeeId}</td>
+            <td>${collector.employeeId || 'N/A'}</td>
             <td>
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <div class="collector-avatar">${initials}</div>
-                    <div>${collector.fullName}</div>
+                    <div>${collector.fullName || 'N/A'}</div>
                 </div>
             </td>
-            <td>${collector.email}</td>
-            <td>${collector.assignedZone}</td>
+            <td>${collector.email || 'N/A'}</td>
+            <td>${collector.assignedZone || 'N/A'}</td>
             <td>${collector.assignedPickups?.length || 0}</td>
             <td><span class="status-badge status-active">Active</span></td>
             <td>
-                <button class="view-collector-btn" data-id="${collector._id}">
-                    <i class="fas fa-eye"></i> View
+                <button class="action-btn view-collector-btn" data-id="${collector._id}" title="View Details">
+                    <i class="fas fa-eye"></i>
                 </button>
             </td>
         `;
@@ -638,35 +605,22 @@ function populateCollectorsTable(collectors) {
 }
 
 function setupCollectorsEventListeners() {
-    // View collector details
-    document.querySelectorAll('.view-collector-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-            currentCollectorId = e.currentTarget.dataset.id;
-            console.log("collector id: ", currentCollectorId)
-            await viewCollectorDetails(currentCollectorId);
-        });
-    });
-    
-    // Add new collector
     document.getElementById('addCollectorBtn')?.addEventListener('click', () => {
-        // Implement add collector functionality
-        alert('Add new collector functionality would go here');
+        showSnackbar('Add new collector functionality (form/modal) would go here.', 'info');
+    });
+
+    // Event delegation for view collector button
+    document.getElementById('collectorsTable')?.addEventListener('click', async (e) => {
+        if (e.target.closest('.view-collector-btn')) {
+            currentCollectorId = e.target.closest('.view-collector-btn').dataset.id;
+            await viewCollectorDetails(currentCollectorId);
+        }
     });
 }
 
 async function viewCollectorDetails(collectorId) {
+    showLoadingOverlay('Loading collector details...');
     try {
-        // // Show loading state
-        // const overlay = document.getElementById('collectorDetailsOverlay');
-        // overlay.style.display = 'block';
-        // overlay.querySelector('.overlay-content').innerHTML = `
-        //     <div style="padding: 20px; text-align: center;">
-        //         <i class="fas fa-spinner fa-spin" style="font-size: 24px;"></i>
-        //         <p>Loading collector details...</p>
-        //     </div>
-        // `;
-
-        // Fetch collector details
         const response = await fetch(`http://localhost:5000/api/v1/admin/get_collector/${collectorId}`, {
             credentials: 'include'
         });
@@ -676,32 +630,23 @@ async function viewCollectorDetails(collectorId) {
         }
         
         const result = await response.json();
-        console.log("collector details: ", result)
         if (!result.success || !result.data) {
             throw new Error(result.message || 'Invalid response data');
         }
 
         populateCollectorOverlay(result.data);
+        document.getElementById('collectorDetailsOverlay').style.display = 'flex';
         
     } catch (error) {
         console.error('Error fetching collector details:', error);
-        const overlayContent = document.querySelector('#collectorDetailsOverlay .overlay-content');
-        if (overlayContent) {
-            overlayContent.innerHTML = `
-                <div style="padding: 20px; text-align: center;">
-                    <i class="fas fa-exclamation-triangle" style="color: #dc3545; font-size: 24px;"></i>
-                    <p>Error loading collector details</p>
-                    <p>${error.message}</p>
-                    <button onclick="document.getElementById('collectorDetailsOverlay').style.display='none'" 
-                            style="padding: 8px 16px; background: #f0f0f0; border: none; border-radius: 4px; cursor: pointer;">
-                        Close
-                    </button>
-                </div>
-            `;
-        }
+        showSnackbar(`Error loading collector details: ${error.message}`, 'error');
+    } finally {
+        hideLoadingOverlay();
     }
 }
 
+let collectorMapInstance = null; // keep it global
+let collectorMapMarker = null;
 function populateCollectorOverlay(collector) {
     const overlay = document.getElementById('collectorDetailsOverlay');
     if (!overlay) return;
@@ -709,91 +654,334 @@ function populateCollectorOverlay(collector) {
     // Format date
     const joinDate = new Date(collector.createdAt);
     const formattedDate = joinDate.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
+        year: 'numeric', month: 'long', day: 'numeric'
     });
     
     // Format coordinates
     const coordinates = collector.currentLocation?.coordinates || [0, 0];
     const formattedCoords = `${coordinates[1]?.toFixed(6) || 'N/A'}, ${coordinates[0]?.toFixed(6) || 'N/A'}`;
     
-    // Create the overlay content
-    const overlayContent = `
-        <span class="close-overlay">&times;</span>
-        
-        <div class="collector-details-container">
-            <!-- Collector Info Section -->
-            <div class="collector-info">
-                <h2>Collector Details</h2>
-                
-                ${[
-                    ['Employee ID', collector.employeeId || 'N/A'],
-                    ['Full Name', collector.fullName || 'N/A'],
-                    ['Email', collector.email || 'N/A'],
-                    ['Assigned Zone', collector.assignedZone || 'N/A'],
-                    ['Current Location', formattedCoords],
-                    ['Member Since', formattedDate]
-                ].map(([label, value]) => `
-                    <div class="detail-row">
-                        <span class="detail-label">${label}:</span>
-                        <span class="detail-value">${value}</span>
-                    </div>
-                `).join('')}
-                
-                <div class="detail-row">
-                    <span class="detail-label">Assigned Pickups:</span>
-                    <div class="detail-value">
-                        ${collector.assignedPickups?.length || 0} active pickups
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Map Section -->
-            <div class="collector-map">
-                <div id="collectorMap" style="height: 300px; background: #f5f5f5; border-radius: 8px;">
-                    <p class="map-placeholder">Map would display here</p>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Action Buttons -->
-        <div class="action-buttons">
-            <button id="reassignCollectorBtn" class="btn btn-warning">
-                <i class="fas fa-random"></i> Reassign Zone
-            </button>
-            <button id="messageCollectorBtn" class="btn btn-primary">
-                <i class="fas fa-envelope"></i> Send Message
-            </button>
-        </div>
-    `;
-    
-    // Set the content
-    overlay.querySelector('.overlay-content').innerHTML = overlayContent;
-    
-    // Setup event listeners
-    document.querySelector('#collectorDetailsOverlay .close-overlay').addEventListener('click', () => {
-        overlay.style.display = 'none';
-    });
-    
-    document.getElementById('reassignCollectorBtn')?.addEventListener('click', () => {
-        reassignCollector(collector._id);
-    });
-    
-    document.getElementById('messageCollectorBtn')?.addEventListener('click', () => {
-        messageCollector(collector._id, collector.fullName);
-    });
-    
-    // Here you would initialize the map with the collector's location
-    // initCollectorMap(collector.currentLocation.coordinates);
+    document.getElementById('collector-employeeId').textContent = collector.employeeId || 'N/A';
+    document.getElementById('collector-fullName').textContent = collector.fullName || 'N/A';
+    document.getElementById('collector-email').textContent = collector.email || 'N/A';
+    document.getElementById('collector-zone').textContent = collector.assignedZone || 'N/A';
+    document.getElementById('collector-location').textContent = formattedCoords;
+    document.getElementById('collector-pickups').textContent = `${collector.assignedPickups?.length || 0} active pickups`;
+    document.getElementById('collector-createdAt').textContent = formattedDate;
+
+    // TODO: Initialize map if needed
+       if (typeof L !== 'undefined' && document.getElementById('collectorMap')) {
+        const mapElement = document.getElementById('collectorMap');
+
+        if (!collectorMapInstance) {
+            // Create map only once
+            collectorMapInstance = L.map('collectorMap').setView([coordinates[1], coordinates[0]], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(collectorMapInstance);
+        } else {
+            // Just move the map view if it already exists
+            collectorMapInstance.setView([coordinates[1], coordinates[0]], 13);
+        }
+
+        // Remove old marker if it exists
+        if (collectorMapMarker) {
+            collectorMapInstance.removeLayer(collectorMapMarker);
+        }
+
+        // Add new marker
+        collectorMapMarker = L.marker([coordinates[1], coordinates[0]])
+            .addTo(collectorMapInstance)
+            .bindPopup(`${collector.fullName}'s Location`)
+            .openPopup();
+
+        collectorMapInstance.invalidateSize();
+    }
+
+    // Reassign and Message buttons' event listeners are already set up globally
 }
 
 function reassignCollector(collectorId) {
-    // Implement reassign functionality
-    alert(`Would reassign collector ${collectorId} to a new zone`);
+    showSnackbar(`Reassign collector ${collectorId} to a new zone (functionality to be implemented).`, 'info');
 }
 
 function messageCollector(collectorId, collectorName) {
-    // Implement messaging functionality
-    alert(`Would open messaging interface for ${collectorName}`);
+    showSnackbar(`Open messaging interface for ${collectorName} (functionality to be implemented).`, 'info');
 }
+
+// --- User Management Functions (Residents) ---
+async function loadUsers() {
+    showLoadingOverlay('Loading registered users...');
+    try {
+        // Assuming an API endpoint for fetching all residents
+        const response = await fetch('http://localhost:5000/api/v1/admin/get_all_residents', { // You might need to create this endpoint
+            credentials: 'include'
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to fetch users');
+        }
+        
+        const { data } = await response.json();
+        populateUsersTable(data);
+        
+    } catch (error) {
+        console.error('Error loading users:', error);
+        showSnackbar('Failed to load registered users. Please ensure the API endpoint exists.', 'error');
+    } finally {
+        hideLoadingOverlay();
+    }
+}
+
+function populateUsersTable(users) {
+    const tbody = document.getElementById('usersList');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    if (users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">No registered users yet.</td></tr>';
+        return;
+    }
+
+    users.forEach(user => {
+        const row = document.createElement('tr');
+        const initials = user.fullName ? user.fullName.split(' ').map(n => n[0]).join('') : 'N/A';
+
+        row.innerHTML = `
+            <td>${user._id.substring(0, 8)}...</td>
+            <td>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="collector-avatar">${initials}</div>
+                    <div>${user.fullName || 'N/A'}</div>
+                </div>
+            </td>
+            <td>${user.email || 'N/A'}</td>
+            <td>${user.phoneNo || 'N/A'}</td>
+            <td>${user.rewardCoins || 0}</td>
+            <td>${user.wasteReports?.length || 0}</td>
+            <!-- <td>
+                <button class="action-btn view-user-btn" data-id="${user._id}" title="View Details">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </td> -->
+        `;
+        tbody.appendChild(row);
+    });
+
+    // Add event listener for view user details (if needed)
+    // document.getElementById('usersTable')?.addEventListener('click', (e) => {
+    //     if (e.target.closest('.view-user-btn')) {
+    //         const userId = e.target.closest('.view-user-btn').dataset.id;
+    //         showSnackbar(`View details for user ${userId} (functionality to be implemented).`, 'info');
+    //     }
+    // });
+}
+
+
+// --- Vendor Management Functions ---
+async function loadVendors() {
+    showLoadingOverlay('Loading registered vendors...');
+    try {
+        // Assuming an API endpoint for fetching all vendors
+        const response = await fetch('http://localhost:5000/api/v1/admin/get_all_vendors', { // You might need to create this endpoint
+            credentials: 'include'
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to fetch vendors');
+        }
+        
+        const { data } = await response.json();
+        populateVendorsTable(data);
+        
+    } catch (error) {
+        console.error('Error loading vendors:', error);
+        showSnackbar('Failed to load registered vendors. Please ensure the API endpoint exists.', 'error');
+    } finally {
+        hideLoadingOverlay();
+    }
+}
+
+function populateVendorsTable(vendors) {
+    const tbody = document.getElementById('vendorsList');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    if (vendors.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">No registered vendors yet.</td></tr>';
+        return;
+    }
+
+    vendors.forEach(vendor => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${vendor.companyName || 'N/A'}</td>
+            <td>${vendor.licenseNo || 'N/A'}</td>
+            <td>${vendor.email || 'N/A'}</td>
+            <td>${(vendor.requiredWasteTypes || []).join(', ') || 'N/A'}</td>
+            <td>${vendor.wasteProcessed || 0}</td>
+            <td>${vendor.energyProduced || 0}</td>
+            <td>${vendor.co2Reduced || 0}</td>
+            <td>
+                <button class="action-btn view-vendor-btn" data-id="${vendor._id}" title="View Details">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+
+    // Add event listener for view vendor details (if needed)
+    document.getElementById('vendorsTable')?.addEventListener('click', (e) => {
+        if (e.target.closest('.view-vendor-btn')) {
+            const vendorId = e.target.closest('.view-vendor-btn').dataset.id;
+            showSnackbar(`View details for vendor ${vendorId} (functionality to be implemented).`, 'info');
+        }
+    });
+}
+
+function setupVendorsEventListeners() {
+    document.getElementById('addVendorBtn')?.addEventListener('click', () => {
+        showSnackbar('Add new vendor functionality (form/modal) would go here.', 'info');
+    });
+
+    document.getElementById('vendorsTable')?.addEventListener('click', async (e) => {
+        if (e.target.closest('.view-vendor-btn')) {
+            currentVendorId = e.target.closest('.view-vendor-btn').dataset.id;
+            await viewVendorDetails(currentVendorId);
+        }
+    });
+}
+
+
+async function viewVendorDetails(VendorId) {
+    showLoadingOverlay('Loading collector details...');
+    try {
+        const response = await fetch(`http://localhost:5000/api/v1/admin/get_vendor/${VendorId}`, {
+            credentials: 'include'
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        if (!result.success || !result.data) {
+            throw new Error(result.message || 'Invalid response data');
+        }
+
+        populateVendorOverlay(result.data);
+        document.getElementById('vendorDetailsOverlay').style.display = 'flex';
+        
+    } catch (error) {
+        console.error('Error fetching vendor details:', error);
+        showSnackbar(`Error loading vendor details: ${error.message}`, 'error');
+    } finally {
+        hideLoadingOverlay();
+    }
+}
+
+let vendorMapInstance = null; // keep it global
+let vendorMapMarker = null;
+
+function populateVendorOverlay(vendor) {
+    const overlay = document.getElementById('vendorDetailsOverlay');
+    if (!overlay) return;
+    
+    // Format date
+    const joinDate = new Date(vendor.createdAt);
+    const formattedDate = joinDate.toLocaleDateString('en-US', {
+        year: 'numeric', month: 'long', day: 'numeric'
+    });
+    
+    // Format coordinates
+    const coordinates = vendor.processingFacilityLocation?.coordinates || [0, 0];
+    const formattedCoords = `${coordinates[1]?.toFixed(6) || 'N/A'}, ${coordinates[0]?.toFixed(6) || 'N/A'}`;
+    
+    document.getElementById('vendor-employeeId').textContent = vendor._id || 'N/A';
+    document.getElementById('vendor-companyName').textContent = vendor.companyName || 'N/A';
+    document.getElementById('vendor-licenseNo').textContent = vendor.licenseNo || 'N/A';
+    document.getElementById('vendor-email').textContent = vendor.email || 'N/A';
+    document.getElementById('vendor-address').textContent = vendor.address || 'N/A';
+    document.getElementById('vendor-processingMethod').textContent = vendor.processingMethod || 'N/A';
+    document.getElementById('vendor-location').textContent = formattedCoords;
+    document.getElementById('vendor-certifications').textContent = `${vendor.certifications || 0}`;
+    document.getElementById('vendor-createdAt').textContent = formattedDate;
+
+    // TODO: Initialize map if needed
+       if (typeof L !== 'undefined' && document.getElementById('vendorMap')) {
+        const mapElement = document.getElementById('vendorMap');
+
+        if (!vendorMapInstance) {
+            // Create map only once
+            vendorMapInstance = L.map('vendorMap').setView([coordinates[1], coordinates[0]], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(vendorMapInstance);
+        } else {
+            // Just move the map view if it already exists
+            vendorMapInstance.setView([coordinates[1], coordinates[0]], 13);
+        }
+
+        // Remove old marker if it exists
+        if (vendorMapMarker) {
+            vendorMapInstance.removeLayer(vendorMapMarker);
+        }
+
+        // Add new marker
+        vendorMapMarker = L.marker([coordinates[1], coordinates[0]])
+            .addTo(vendorMapInstance)
+            .bindPopup(`${vendor.companyName}'s Location`)
+            .openPopup();
+
+        vendorMapInstance.invalidateSize();
+    }
+
+    // Reassign and Message buttons' event listeners are already set up globally
+}
+
+// --- Common UI Functions ---
+function showLoadingOverlay(message = 'Loading...') {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+        overlay.style.display = 'flex';
+        overlay.querySelector('p').textContent = message;
+    }
+}
+
+function hideLoadingOverlay() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
+}
+
+async function logoutUser() {
+    try {
+        const response = await fetch('http://localhost:5000/api/v1/admin/logout', {
+            method: 'POST',
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            clearAuthCookies();
+            showSnackbar('Logged out successfully.', 'success');
+            setTimeout(() => { window.location.href = '/resident/login'; }, 1000); // Redirect to login
+        } else {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Logout failed');
+        }
+    } catch (error) {
+        console.error('Logout error:', error);
+        showSnackbar(`Logout failed: ${error.message}`, 'error');
+        // Even if API logout fails, clear cookies and redirect for client-side logout
+        clearAuthCookies();
+        setTimeout(() => { window.location.href = '/resident/login'; }, 1000);
+    }
+}
+
+function clearAuthCookies() {
+    document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    document.cookie = 'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+}
+
+function showLoginPage() {
+    window.location.href = '/resident/login';
+}
+

@@ -15,7 +15,8 @@ import {
 	reportWaste,
 	getResidentDashboard,
 	getMyWasteReports,
-	getWasteDetails
+	getWasteDetails,
+	deleteWasteReport 
 } from "../controllers/residents.controller.js";
 import { MultiUpload, upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/Auth.middleware.js";
@@ -37,5 +38,6 @@ router.post("/report-waste", verifyJWT, MultiUpload, reportWaste);
 router.get("/dashboard", verifyJWT, getResidentDashboard);
 router.get("/waste-history", verifyJWT, getMyWasteReports);
 router.get("/waste-details/:wasteId", verifyJWT, getWasteDetails);
+router.delete("/delete-report/:reportId", verifyJWT, deleteWasteReport);
 	
 export default router;

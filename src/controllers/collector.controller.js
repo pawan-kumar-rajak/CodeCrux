@@ -9,15 +9,14 @@ import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import { parseCoordinates } from "../utils/location_handling.js";
 import { WasteReport } from "../models/wasteReport.model.js";
-
+import { Bin } from "../models/bin.model.js";
+import { Vendor } from "../models/vendor.model.js";
 
 const generateAccessAndRefereshTokens = async (userId) => {
     try {
-
         const user = await User.findById(userId);
         const accessToken = user.generateAccessToken();
         const refreshToken = user.generateRefreshToken();
-
 
         user.refreshToken = refreshToken;
         await user.save({ validateBeforeSave: false });
@@ -54,8 +53,8 @@ const registerCollector = asyncHandler(async (req, res, next) => {
 
         // Process coordinates for currentLocation
         const parsedCoordinates = parseCoordinates(currentLocation.coordinates);
-        if (!parsedCoordinates) {
-            return next(new ApiError(400, "Invalid coordinates for current location"));
+        if (!parsedCoordinates || parsedCoordinates.length !== 2) {
+            return next(new ApiError(400, "Invalid coordinates format for current location. Expected [longitude, latitude]"));
         }
 
         // Create a new collector document
@@ -102,37 +101,26 @@ const registerCollector = asyncHandler(async (req, res, next) => {
             session.endSession();
         }
         console.error("Error during transaction: ", error);
-        return next(new ApiError(500, "Something went wrong while registering the collector"));
+        return next(new ApiError(500, "Something went wrong while registering the collector: " + error.message));
     }
 });
 
 
-
-
-const loginUser = asyncHandler(async (req, res) => {
-    // req body -> data
-    // username or email
-    //find the user
-    //password check
-    //access and referesh token
-    //send cookie
-
-    const { email,password } = req.body;
+const loginUser = asyncHandler(async (req, res, next) => {
+    const { email, password } = req.body; // Removed username as it's not in collector model
     if (!email || !password) {
-        throw new ApiError(400, "Email and password are required");
+        return next(new ApiError(400, "Email and password are required"));
     }
 
     const user = await User.findOne({ email });
     if (!user) {
-        throw new ApiError(404, "Collector does not exist");
+        return next(new ApiError(404, "Collector does not exist"));
     }
 
-    const isPasswordValid = await user.isPasswordCorrect(
-        password
-    );
+    const isPasswordValid = await user.isPasswordCorrect(password);
 
     if (!isPasswordValid) {
-        throw new ApiError(401, "Invalid credentials");
+        return next(new ApiError(401, "Invalid credentials"));
     }
 
     const { accessToken, refreshToken } =
@@ -164,7 +152,7 @@ const loginUser = asyncHandler(async (req, res) => {
         );
 });
 
-const logoutUser = asyncHandler(async (req, res) => {
+const logoutUser = asyncHandler(async (req, res, next) => {
     await User.findByIdAndUpdate(
         req.user._id,
         {
@@ -190,12 +178,12 @@ const logoutUser = asyncHandler(async (req, res) => {
 });
 
 const refreshAccessToken = asyncHandler(
-    async (req, res) => {
+    async (req, res, next) => {
         const incomingRefreshToken =
             req.cookies.refreshToken || req.body.refreshToken;
 
         if (!incomingRefreshToken) {
-            throw new ApiError(401, "unauthorized request");
+            return next(new ApiError(401, "unauthorized request"));
         }
 
         try {
@@ -207,7 +195,7 @@ const refreshAccessToken = asyncHandler(
             const user = await User.findById(decodedToken?._id);
 
             if (!user) {
-                throw new ApiError(401, "Invalid refresh token");
+                return next(new ApiError(401, "Invalid refresh token"));
             }
 
             if (incomingRefreshToken !== user?.refreshToken) {
@@ -246,16 +234,16 @@ const refreshAccessToken = asyncHandler(
 );
 
 // Update collector's current location
-const updateLocation = asyncHandler(async (req, res) => {
+const updateLocation = asyncHandler(async (req, res, next) => {
     const { coordinates } = req.body;
-    
+
     if (!coordinates || !Array.isArray(coordinates) || coordinates.length !== 2) {
-        throw new ApiError(400, "Invalid coordinates format. Expected [longitude, latitude]");
+        return next(new ApiError(400, "Invalid coordinates format. Expected [longitude, latitude]"));
     }
 
     const [longitude, latitude] = coordinates;
     if (longitude < -180 || longitude > 180 || latitude < -90 || latitude > 90) {
-        throw new ApiError(400, "Invalid coordinates values");
+        return next(new ApiError(400, "Invalid coordinates values"));
     }
 
     await Collector.findByIdAndUpdate(req.user._id, {
@@ -271,188 +259,458 @@ const updateLocation = asyncHandler(async (req, res) => {
 });
 
 // Get assigned pickups
-const getAssignedPickups = asyncHandler(async (req, res) => {
+const getAssignedPickups = asyncHandler(async (req, res, next) => {
     const collector = await Collector.findById(req.user._id)
         .populate({
-            path: 'assignedPickups',
+            path: 'assignedPickups', // These are WasteProcessingRequests
+            match: { status: { $in: ['collector_assigned', 'collected_from_bin'] } }, // Pickups assigned to collector or collected but not delivered
             populate: [
-                { 
-                    path: 'wasteReport', 
-                    populate: { 
-                        path: 'reportedBy', 
-                        select: 'fullName phoneNo coordinates address' 
-                    } 
+                {
+                    path: 'bin', // Populate the Bin details
+                    populate: {
+                        path: 'assignedReports', // Get some reports from the bin to show details
+                        select: 'userReportedType approximateWeight coordinates reportedBy photoUrl mlIdentifiedType status',
+                        populate: {
+                            path: 'reportedBy',
+                            select: 'fullName phoneNo address'
+                        }
+                    }
                 },
-                { 
-                    path: 'vendor', 
-                    select: 'companyName processingFacilityLocation address' 
+                {
+                    path: 'vendor', // If assigned to a vendor
+                    select: 'companyName processingFacilityLocation address'
                 }
             ]
         })
         .lean();
 
     if (!collector) {
-        throw new ApiError(404, "Collector not found");
+
     }
 
-    const formattedPickups = collector.assignedPickups.map(pickup => ({
-        id: pickup._id,
-        status: pickup.status,
-        wasteReport: pickup.wasteReport ? {
-            id: pickup.wasteReport._id,
-            type: pickup.wasteReport.mlIdentifiedType,
-            weight: pickup.wasteReport.approximateWeight,
-            reporter: {
-                name: pickup.wasteReport.reportedBy.fullName,
-                phone: pickup.wasteReport.reportedBy.phoneNo,
-                address: pickup.wasteReport.reportedBy.address
+    const formattedPickups = collector.assignedPickups.map(request => {
+        const bin = request.bin;
+        if (!bin) return null; // Skip if bin is not populated for some reason
+
+        // Find a representative report from the bin for display purposes
+        const representativeReport = bin.assignedReports?.[0];
+        const pickupLocation = bin.location; // Bin's location is the pickup location
+
+        let dropoffLocation = null;
+        if (request.vendor && request.vendor.processingFacilityLocation) {
+            dropoffLocation = request.vendor.processingFacilityLocation;
+        } else {
+            // Default to a landfill location if no vendor is assigned
+            dropoffLocation = { type: 'Point', coordinates: [75.8169, 26.8365] }; // Example Landfill
+        }
+
+        return {
+            requestId: request._id,
+            status: request.status,
+            bin: {
+                _id: bin._id,
+                binId: bin.binId,
+                location: bin.location,
+                fillLevel: bin.fillLevel,
+                wasteType: bin.wasteType,
+                currentWasteComposition: bin.currentWasteComposition,
+                // Display info from a representative report in the bin
+                representativeReport: representativeReport ? {
+                    _id: representativeReport._id,
+                    userReportedType: representativeReport.userReportedType,
+                    mlIdentifiedType: representativeReport.mlIdentifiedType,
+                    approximateWeight: representativeReport.approximateWeight,
+                    reporter: {
+                        name: representativeReport.reportedBy?.fullName,
+                        phone: representativeReport.reportedBy?.phoneNo,
+                        address: representativeReport.reportedBy?.address
+                    },
+                    photoUrl: representativeReport.photoUrl?.[0] || null // First image
+                } : null
             },
-            location: pickup.wasteReport.coordinates
-        } : null,
-        vendor: pickup.vendor ? {
-            name: pickup.vendor.companyName,
-            facility: pickup.vendor.processingFacilityLocation,
-            address: pickup.vendor.address
-        } : null,
-        createdAt: pickup.createdAt
-    }));
+            vendor: request.vendor ? {
+                name: request.vendor.companyName,
+                facilityLocation: request.vendor.processingFacilityLocation,
+                address: request.vendor.address
+            } : null,
+            pickupLocation: pickupLocation, // Bin's location
+            dropoffLocation: dropoffLocation, // Vendor's facility or landfill
+            createdAt: request.createdAt
+        };
+    }).filter(Boolean); // Filter out nulls
 
     return res.status(200).json(
         new ApiResponse(200, formattedPickups, 'Assigned pickups fetched successfully')
     );
 });
 
-// Mark pickup as collected
-const markAsCollected = asyncHandler(async (req, res) => {
-    const { requestId, currentLocation } = req.body;
 
-    if (!requestId || !currentLocation || !Array.isArray(currentLocation) || currentLocation.length !== 2) {
-        throw new ApiError(400, "Invalid request parameters");
-    }
+const markAsCollected = asyncHandler(async (req, res, next) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    const request = await WasteProcessingRequest.findById(requestId)
-        .populate('wasteReport')
-        .populate('vendor');
-
-    if (!request) {
-        throw new ApiError(404, 'Request not found');
-    }
-
-    if (!request.wasteReport) {
-        throw new ApiError(404, 'Associated waste report not found');
-    }
-
-    // Validate collector assignment
-    if (request.collector.toString() !== req.user._id.toString()) {
-        throw new ApiError(403, 'Not authorized to collect this pickup');
-    }
-
-    // Check proximity to pickup location (50 meters)
-    const distance = calculateDistance(
-        currentLocation,
-        request.wasteReport.coordinates.coordinates
-    );
-
-    if (distance > 50) {
-        throw new ApiError(400, 'You must be within 50 meters to mark as collected');
-    }
-
-    // Update waste report status and add collection timestamp
-    const updatedWasteReport = await WasteReport.findByIdAndUpdate(
-        request.wasteReport._id,
-        {
-            status: 'in_transit',
-            collectionTimestamp: new Date(),
-            collectedBy: req.user._id
-        },
-        { new: true }
-    );
-
-    // Update request status
-    await WasteProcessingRequest.findByIdAndUpdate(
-        requestId,
-        {
-            status: 'in_transit',
-            collectionDetails: {
-                timestamp: new Date(),
-                location: {
-                    type: 'Point',
-                    coordinates: currentLocation
-                }
-            }
-        }
-    );
-
-    return res.status(200).json(
-        new ApiResponse(200, 
-            { 
-                wasteReport: updatedWasteReport,
-                nextDestination: request.vendor?.processingFacilityLocation
-            }, 
-            'Pickup marked as collected successfully'
-        )
-    );
-});
-
-// Mark delivery as completed
-const markAsDelivered = async (req, res, next) => {
     try {
         const { requestId, currentLocation } = req.body;
 
+        if (!requestId || !currentLocation || !Array.isArray(currentLocation) || currentLocation.length !== 2) {
+            await session.abortTransaction();
+            session.endSession();
+            return next(new ApiError(400, "Invalid request parameters. requestId and currentLocation [longitude, latitude] are required."));
+        }
+
         const request = await WasteProcessingRequest.findById(requestId)
-            .populate('wasteReport')
-            .populate('vendor');
+            .populate('bin')
+            .populate('vendor')
+            .session(session);
 
         if (!request) {
-            return next(new ApiError(404, 'Request not found'));
+            await session.abortTransaction();
+            session.endSession();
+            return next(new ApiError(404, 'Processing request not found'));
+        }
+        if (!request.bin) {
+            await session.abortTransaction();
+            session.endSession();
+            return next(new ApiError(404, 'Associated bin not found for this request'));
+        }
+        if (!request.collector || request.collector.toString() !== req.user._id.toString()) {
+            await session.abortTransaction();
+            session.endSession();
+            return next(new ApiError(403, 'Not authorized to collect this pickup. It is not assigned to you.'));
         }
 
-        // Check proximity to vendor location (50 meters)
+        // Check proximity to bin (optional)
         const distance = calculateDistance(
             currentLocation,
-            request.vendor.processingFacilityLocation.coordinates
+            request.bin.location.coordinates
+        );
+        // if (distance > 50) {
+        //     await session.abortTransaction();
+        //     session.endSession();
+        //     return next(new ApiError(400, `You must be within 50 meters of the bin to mark as collected. Current distance: ${distance.toFixed(2)}m`));
+        // }
+
+        // 1. Update WasteProcessingRequest
+        request.status = 'collected_from_bin';
+        request.collectionDetails = {
+            timestamp: new Date(),
+            location: {
+                type: 'Point',
+                coordinates: currentLocation
+            }
+        };
+        await request.save({ session });
+
+        // 2. Reset Bin state
+        await Bin.findByIdAndUpdate(
+            request.bin._id,
+            {
+                $set: {
+                    fillLevel: 0,
+                    currentWasteComposition: {},
+                    lastCollected: new Date()
+                }
+            },
+            { session }
         );
 
-        if (distance > 50) {
-            return next(new ApiError(400, 'You must be within 50 meters of the vendor facility to mark as delivered'));
+        // 3. Update WasteReports
+        await WasteReport.updateMany(
+            { assignedBin: request.bin._id, status: { $in: ['assigned_to_bin', 'awaiting_collection'] } },
+            {
+                $set: {
+                    status: 'collected_from_bin',
+                    collectionTimestamp: new Date(),
+                    collectedBy: req.user._id
+                }
+            },
+            { session }
+        );
+
+        // Commit transaction
+        await session.commitTransaction();
+        session.endSession();
+
+        return res.status(200).json(
+            new ApiResponse(
+                200,
+                {
+                    bin: request.bin,
+                    nextDestination: request.vendor?.processingFacilityLocation?.coordinates
+                },
+                'Bin contents marked as collected successfully. Proceed to drop-off.'
+            )
+        );
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+
+        console.error('Error marking bin as collected:', error);
+        next(new ApiError(500, 'Error marking bin as collected: ' + error.message));
+    }
+});
+
+
+// Mark delivery as completed
+// const markAsDelivered = asyncHandler(async (req, res, next) => {
+//     try {
+//         const { requestId, currentLocation } = req.body;
+
+//         if (!requestId || !currentLocation || !Array.isArray(currentLocation) || currentLocation.length !== 2) {
+//             return next(new ApiError(400, "Invalid request parameters. requestId and currentLocation [longitude, latitude] are required."));
+//         }
+
+//         const request = await WasteProcessingRequest.findById(requestId)
+//             .populate('bin')
+//             .populate('vendor')
+//             .lean();
+
+//         if (!request) {
+//             return next(new ApiError(404, 'Processing request not found'));
+//         }
+//         if (!request.bin) {
+//             return next(new ApiError(404, 'Associated bin not found for this request'));
+//         }
+//         if (!request.collector || request.collector.toString() !== req.user._id.toString()) {
+//             return next(new ApiError(403, 'Not authorized to deliver this pickup. It is not assigned to you.'));
+//         }
+
+//         let dropoffCoordinates;
+//         let deliveredToVendorId = null;
+
+//         if (request.vendor && request.vendor.processingFacilityLocation && request.vendor.processingFacilityLocation.coordinates) {
+//             dropoffCoordinates = request.vendor.processingFacilityLocation.coordinates;
+//             deliveredToVendorId = request.vendor._id;
+//         } else {
+//             // If no vendor, assume delivery to a default landfill
+//             dropoffCoordinates = [75.8169, 26.8365]; // Example Landfill coordinates [lng, lat]
+//             console.warn(`Request ${requestId} has no vendor, assuming delivery to default landfill.`);
+//         }
+
+//         // Check proximity to dropoff location (50 meters)
+//         const distance = calculateDistance(
+//             currentLocation,
+//             dropoffCoordinates
+//         );
+
+//         if (distance > 50) { // 50 meters
+//             return next(new ApiError(400, `You must be within 50 meters of the dropoff facility to mark as delivered. Current distance: ${distance.toFixed(2)}m`));
+//         }
+
+//         // Update WasteProcessingRequest status
+//         await WasteProcessingRequest.findByIdAndUpdate(requestId, {
+//             status: 'delivered_to_vendor', // New status
+//             deliveryDetails: {
+//                 timestamp: new Date(),
+//                 location: {
+//                     type: 'Point',
+//                     coordinates: currentLocation
+//                 }
+//             }
+//         });
+
+//         // Update status of all associated WasteReports to 'delivered_to_vendor' or 'landfilled'
+//         const updateReportStatus = deliveredToVendorId ? 'delivered_to_vendor' : 'landfilled';
+//         await WasteReport.updateMany(
+//             { assignedBin: request.bin._id, status: { $in: ['collected_from_bin'] } },
+//             {
+//                 $set: {
+//                     status: updateReportStatus,
+//                     deliveryTimestamp: new Date(),
+//                     deliveredToVendor: deliveredToVendorId
+//                 }
+//             }
+//         );
+
+//         // If delivered to a vendor, update vendor's metrics based on bin's contents
+//         if (deliveredToVendorId) {
+//             const binContents = request.bin.currentWasteComposition; // Map of wasteType -> weight
+//             let totalWeightProcessed = 0;
+//             let totalEnergyGenerated = 0;
+//             let totalCo2Reduced = 0;
+
+//             // This requires the ML service's waste_classification data or similar lookup
+//             // For now, use a simplified calculation or assume ML details are available in WasteReports
+//             // A more robust solution would involve fetching waste_classification from ML service or config
+//             const mockWasteClassification = { // This should ideally come from a shared config or ML service
+//                 'plastic waste': { energy_potential: 80, co2_reduction: 0.9 },
+//                 'organic waste': { energy_potential: 75, co2_reduction: 1.1 },
+//                 'metal waste': { energy_potential: 45, co2_reduction: 0.7 },
+//                 'glass waste': { energy_potential: 25, co2_reduction: 0.4 },
+//                 'E-waste': { energy_potential: 85, co2_reduction: 1.2 },
+//                 'automobile wastes': { energy_potential: 65, co2_reduction: 0.8 },
+//                 'battery waste': { energy_potential: 90, co2_reduction: 1.5 },
+//                 'light bulbs': { energy_potential: 55, co2_reduction: 0.9 },
+//                 'mixed': { energy_potential: 40, co2_reduction: 0.5 } // Fallback for mixed
+//             };
+
+//             for (const [type, weight] of Object.entries(binContents)) {
+//                 totalWeightProcessed += weight;
+//                 const typeInfo = mockWasteClassification[type] || mockWasteClassification['mixed'];
+//                 totalEnergyGenerated += (typeInfo.energy_potential || 0) * weight;
+//                 totalCo2Reduced += (typeInfo.co2_reduction || 0) * weight;
+//             }
+
+//             await Vendor.findByIdAndUpdate(deliveredToVendorId, {
+//                 $inc: {
+//                     wasteProcessed: totalWeightProcessed,
+//                     energyProduced: totalEnergyGenerated,
+//                     co2Reduced: totalCo2Reduced
+//                 }
+//             });
+//             console.log(`Vendor ${deliveredToVendorId} metrics updated.`);
+//         }
+
+//         res.status(200).json(new ApiResponse(200, {}, 'Delivery marked as completed successfully'));
+//     } catch (error) {
+//         console.error('Error marking delivery as completed:', error);
+//         next(new ApiError(500, 'Error marking delivery as completed: ' + error.message));
+//     }
+// });
+
+// MODIFIED FUNCTION: The collector now only confirms the weight delivered.
+// The vendor will be responsible for adding the final energy/CO2 metrics upon processing.
+const markAsDelivered = asyncHandler(async (req, res, next) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const { requestId, currentLocation } = req.body;
+
+        if (!requestId || !currentLocation || !Array.isArray(currentLocation) || currentLocation.length !== 2) {
+            await session.abortTransaction();
+            session.endSession();
+            return next(new ApiError(400, "Invalid request parameters. requestId and currentLocation are required."));
         }
 
-        // Update request status
-        await WasteProcessingRequest.findByIdAndUpdate(requestId, {
-            status: 'completed'
-        });
+        const request = await WasteProcessingRequest.findById(requestId)
+            .populate('bin')
+            .populate('vendor')
+            .session(session); // attach session
 
-        // Calculate and update resident rewards
-        const reward = calculateReward(
-            request.wasteReport.approximateWeight,
-            request.wasteReport.status === 'useful'
+        if (!request) {
+            await session.abortTransaction();
+            session.endSession();
+            return next(new ApiError(404, 'Processing request not found'));
+        }
+        if (!request.collector || request.collector.toString() !== req.user._id.toString()) {
+            await session.abortTransaction();
+            session.endSession();
+            console.log("not authorized")
+            return next(new ApiError(403, 'Not authorized to deliver this pickup.'));
+        }
+
+        let dropoffCoordinates;
+        if (request.vendor && request.vendor.processingFacilityLocation) {
+            dropoffCoordinates = request.vendor.processingFacilityLocation.coordinates;
+        } else {
+            dropoffCoordinates = [75.8169, 26.8365]; // Default Landfill
+        }
+
+        const distance = calculateDistance(currentLocation, dropoffCoordinates);
+        // if (distance > 50) { 
+        //     await session.abortTransaction();
+        //     session.endSession();
+        //     return next(new ApiError(400, `You must be within 50m of the dropoff location. Current distance: ${distance.toFixed(2)}m`));
+        // }
+
+        // --- ATOMIC UPDATES ---
+        // 1. Update WasteProcessingRequest
+        request.status = 'delivered_to_vendor';
+        request.deliveryDetails = {
+            timestamp: new Date(),
+            location: { type: 'Point', coordinates: currentLocation }
+        };
+        await request.save({ session });
+
+        // 2. Update WasteReports
+        const updateReportStatus = request.vendor ? 'delivered_to_vendor' : 'landfilled';
+        await WasteReport.updateMany(
+            { assignedBin: request.bin._id, status: 'collected_from_bin' },
+            {
+                $set: {
+                    status: updateReportStatus,
+                    deliveryTimestamp: new Date(),
+                    deliveredToVendor: request.vendor?._id
+                }
+            },
+            { session }
         );
 
-        await Resident.findByIdAndUpdate(request.wasteReport.reportedBy, {
-            $inc: { rewardCoins: reward }
-        });
+        console.log('bendor tak a gye h', request.bin.currentWasteComposition)
+        // 3. Update Vendor metrics (if applicable)
+        if (request.vendor) {
+            const composition = request.bin.currentWasteComposition || {};
 
-        res.status(200).json(new ApiResponse(200, { reward }, 'Delivery marked as completed successfully'));
+            // If it's a Mongoose Map, convert it to a plain JS object
+            const plainComp = composition instanceof Map ? Object.fromEntries(composition) : composition;
+
+            const totalWeightInBin = Object.values(plainComp)
+                .map(val => Number(val) || 0)   // force numbers
+                .reduce((sum, weight) => sum + weight, 0);
+
+            await Vendor.findByIdAndUpdate(
+                request.vendor._id,
+                { $inc: { wasteProcessed: totalWeightInBin } },
+                { session }
+            );
+
+            console.log(`Vendor ${request.vendor._id} metrics updated with ${totalWeightInBin}kg of waste.`);
+        }
+
+
+        // Commit the transaction
+        await session.commitTransaction();
+        session.endSession();
+
+        res.status(200).json(new ApiResponse(200, {}, 'Delivery marked as completed successfully'));
     } catch (error) {
-        next(new ApiError(500, 'Error marking delivery as completed'));
+        // Rollback on error
+        await session.abortTransaction();
+        session.endSession();
+
+        console.error('Error marking delivery as completed:', error);
+        next(new ApiError(500, 'Error marking delivery as completed: ' + error.message));
     }
-};
+});
+
+
+// NEW FUNCTION: Provides a complete history of all jobs for the logged-in collector.
+const getCollectionHistory = asyncHandler(async (req, res, next) => {
+    try {
+        const collectionHistory = await WasteProcessingRequest.find({ collector: req.user._id })
+            .populate('bin', 'binId location wasteType')
+            .populate('vendor', 'companyName')
+            .sort({ createdAt: -1 })
+            .lean();
+
+        if (!collectionHistory) {
+            return res.status(200).json(new ApiResponse(200, [], "No collection history found."));
+        }
+
+        res.status(200).json(new ApiResponse(200, collectionHistory, "Collection history fetched successfully."));
+    } catch (error) {
+        next(new ApiError(500, 'Error fetching collection history: ' + error.message));
+    }
+});
+
+
 
 // Get collector dashboard stats
-const getCollectorDashboard = async (req, res, next) => {
+const getCollectorDashboard = asyncHandler(async (req, res, next) => {
     try {
         const collector = await Collector.findById(req.user._id)
-            .populate('assignedPickups')
             .populate({
                 path: 'assignedPickups',
-                match: { status: { $nin: ['completed', 'cancelled'] } }, // Filter at query level
+                // Filter for requests that are still active for the collector
+                match: { status: { $in: ['collector_assigned', 'collected_from_bin'] } },
                 populate: [
                     {
-                        path: 'wasteReport',
-                        match: { status: { $nin: ['unidentified', 'pending'] } },
+                        path: 'bin', // Populate the bin
+                        select: 'binId location fillLevel wasteType currentWasteComposition assignedReports',
                         populate: {
-                            path: 'reportedBy',
-                            select: 'fullName phoneNo'
+                            path: 'assignedReports',
+                            select: 'mlIdentifiedType approximateWeight photoUrl'
                         }
                     },
                     {
@@ -463,85 +721,93 @@ const getCollectorDashboard = async (req, res, next) => {
             })
             .lean();
 
-        const totalAssigned = collector.assignedPickups.length;
-        const pendingPickups = collector.assignedPickups.filter(p => p.status === 'pending_vendor').length;
-        const completedPickups = collector.assignedPickups.filter(p => p.status === 'completed').length;
+        if (!collector) {
+            return next(new ApiError(404, "Collector not found"));
+        }
+
+        // Fetch all requests ever assigned to this collector to get 'delivered' count
+        const allCollectorRequests = await WasteProcessingRequest.find({ collector: req.user._id }).lean();
+
+        const totalAssigned = allCollectorRequests.length;
+        const pendingPickups = allCollectorRequests.filter(p => p.status === 'collector_assigned').length;
+        const deliveredPickups = allCollectorRequests.filter(p => p.status === 'delivered_to_vendor').length;
 
         const dashboardData = {
             totalAssigned,
             pendingPickups,
-            completedPickups,
-            recentPickups: collector.assignedPickups.slice(0, 15)
+            deliveredPickups,
+            // Recent pickups are the active ones
+            recentPickups: collector.assignedPickups.slice(0, 15).map(request => ({
+                requestId: request._id,
+                status: request.status,
+                binId: request.bin?.binId || 'N/A',
+                binLocation: request.bin?.location?.coordinates || [],
+                binFillLevel: request.bin?.fillLevel || 0,
+                binWasteType: request.bin?.wasteType || 'N/A',
+                // Display info from a representative report in the bin
+                representativeWasteType: request.bin?.assignedReports?.[0]?.mlIdentifiedType || 'N/A',
+                representativeWeight: request.bin?.assignedReports?.[0]?.approximateWeight || 0,
+                vendorName: request.vendor?.companyName || 'Landfill',
+                createdAt: request.createdAt
+            }))
         };
 
-        res.status(200).json(new ApiResponse(200, dashboardData, 'Dashboard data fetched successfully'));
+        res.status(200).json(new ApiResponse(200, dashboardData, 'Collector dashboard data fetched successfully'));
     } catch (error) {
-        console.log("error: ", error)
-        next(new ApiError(500, 'Error fetching collector dashboard'));
+        console.error("Error fetching collector dashboard: ", error);
+        next(new ApiError(500, 'Error fetching collector dashboard: ' + error.message));
     }
-};
+});
 
-// get all pending pickups
-const getPendingPickupsWithDropoff = async (req, res, next) => {
+// get all pending pickups with dropoff locations (for route optimization)
+const getPendingPickupsWithDropoff = asyncHandler(async (req, res, next) => {
     try {
-        // Constants (could be moved to config/environment variables)
         const DEFAULT_LANDFILL = {
             name: "Landfill 1",
             coordinates: [75.8169, 26.8365] // [longitude, latitude]
         };
 
-        // Validate user ID
         if (!req.user?._id) {
-            throw new ApiError(400, 'User ID is required');
+            return next(new ApiError(400, 'User ID is required'));
         }
 
-        // Fetch collector with populated data
         const collector = await Collector.findById(req.user._id)
             .populate({
                 path: 'assignedPickups',
-                match: { status: { $nin: ['completed', 'cancelled'] } }, // Filter at query level
+                match: { status: { $in: ['collector_assigned', 'collected_from_bin'] } },
                 populate: [
-                    {
-                        path: 'wasteReport',
-                        match: { status: { $nin: ['unidentified', 'pending'] } },
-                        populate: {
-                            path: 'reportedBy',
-                            select: 'fullName phoneNo'
-                        }
-                    },
-                    {
-                        path: 'vendor',
-                        select: 'companyName processingFacilityLocation'
-                    }
+                    { path: 'bin', select: 'binId location wasteType currentWasteComposition' },
+                    { path: 'vendor', select: 'companyName processingFacilityLocation' }
                 ]
             })
-            .lean(); // Convert to plain JS object for better performance
+            .lean();
 
         if (!collector) {
-            throw new ApiError(404, 'Collector not found');
+            return next(new ApiError(404, 'Collector not found'));
         }
 
-        // Process pickups
         const processedPickups = collector.assignedPickups
-            .filter(pickup => pickup.wasteReport) // Ensure wasteReport exists after population
-            .map(pickup => {
-                // Determine dropoff location
-                const dropoffLocation = pickup.status === "accepted" && pickup.vendor
-                    ? {
-                        name: pickup.vendor.companyName,
-                        coordinates: pickup.vendor.processingFacilityLocation?.coordinates || DEFAULT_LANDFILL.coordinates
-                    }
-                    : DEFAULT_LANDFILL;
+            .filter(request => request.bin) // Ensure bin is populated
+            .map(request => {
+                const bin = request.bin;
+                let dropoffLocation = DEFAULT_LANDFILL;
+
+                if (request.vendor && request.vendor.processingFacilityLocation) {
+                    dropoffLocation = {
+                        name: request.vendor.companyName,
+                        coordinates: request.vendor.processingFacilityLocation.coordinates
+                    };
+                }
 
                 return {
-                    pickupId: pickup._id,
-                    status: pickup.status,
-                    wasteReport: {
-                        ...pickup.wasteReport,
-                        reporter: pickup.wasteReport.reportedBy // Rename for clarity
-                    },
-                    dropoffLocation,
-                    pickupLocation: pickup.wasteReport?.location // Assuming wasteReport has location
+                    requestId: request._id,
+                    status: request.status,
+                    binId: bin.binId,
+                    pickupLocation: bin.location.coordinates, // Bin's location
+                    dropoffLocation: dropoffLocation,
+                    binContents: bin.currentWasteComposition, // Full composition
+                    binWasteType: bin.wasteType, // Primary bin type
+                    estimatedWeight: Object.values(bin.currentWasteComposition).reduce((sum, val) => sum + val, 0) // Sum of weights in bin
                 };
             });
 
@@ -550,12 +816,109 @@ const getPendingPickupsWithDropoff = async (req, res, next) => {
         );
 
     } catch (error) {
-        // Pass along existing ApiError or create new one
         next(error instanceof ApiError ? error :
-            new ApiError(500, 'Error fetching pickups with dropoff locations'));
+            new ApiError(500, 'Error fetching pickups with dropoff locations: ' + error.message));
+    }
+});
+
+const getWasteDetails = async (req, res, next) => {
+    try {
+        const { wasteId } = req.params; // This is a WasteReport ID
+
+        const wasteReport = await WasteReport.findById(wasteId)
+            .populate('reportedBy', 'fullName phoneNo address')
+            .populate('assignedBin', 'binId location fillLevel wasteType currentWasteComposition') // Populate assigned bin
+            .lean();
+
+        if (!wasteReport) {
+            return next(new ApiError(404, 'Waste report not found'));
+        }
+
+        let processingRequestDetails = null;
+        if (wasteReport.assignedBin) {
+            // Find the most recent active processing request for this bin
+            const activeRequest = await WasteProcessingRequest.findOne({
+                bin: wasteReport.assignedBin._id,
+                status: { $in: ['collector_assigned', 'collected_from_bin', 'delivered_to_vendor', 'processed_by_vendor'] }
+            })
+                .populate('vendor', 'companyName processingFacilityLocation address')
+                .populate('collector', 'fullName phoneNo employeeId')
+                .sort({ createdAt: -1 })
+                .lean();
+
+            if (activeRequest) {
+                processingRequestDetails = {
+                    _id: activeRequest._id,
+                    status: activeRequest.status,
+                    vendor: activeRequest.vendor ? {
+                        _id: activeRequest.vendor._id,
+                        companyName: activeRequest.vendor.companyName,
+                        address: activeRequest.vendor.address,
+                        processingFacilityLocation: activeRequest.vendor.processingFacilityLocation.coordinates
+                    } : null,
+                    collector: activeRequest.collector ? {
+                        _id: activeRequest.collector._id,
+                        fullName: activeRequest.collector.fullName,
+                        phoneNo: activeRequest.collector.phoneNo,
+                        employeeId: activeRequest.collector.employeeId
+                    } : null,
+                    collectionDetails: activeRequest.collectionDetails || null,
+                    deliveryDetails: activeRequest.deliveryDetails || null,
+                    processingCompletionDetails: activeRequest.processingCompletionDetails || null,
+                    createdAt: activeRequest.createdAt
+                };
+            }
+        }
+
+        // Prepare the response data
+        const responseData = {
+            wasteReport: {
+                _id: wasteReport._id,
+                wasteType: {
+                    userReported: wasteReport.userReportedType,
+                    mlIdentified: wasteReport.mlIdentifiedType,
+                    mlDetails: wasteReport.mlDetails
+                },
+                weight: wasteReport.approximateWeight,
+                status: wasteReport.status,
+                location: {
+                    coordinates: wasteReport.coordinates.coordinates,
+                    address: wasteReport.address, // Assuming address is a string or populated
+                    zone: wasteReport.assignedZone
+                },
+                images: wasteReport.photoUrl,
+                createdAt: wasteReport.createdAt,
+                assignedBin: wasteReport.assignedBin ? { // Include bin details
+                    _id: wasteReport.assignedBin._id,
+                    binId: wasteReport.assignedBin.binId,
+                    location: wasteReport.assignedBin.location.coordinates,
+                    fillLevel: wasteReport.assignedBin.fillLevel,
+                    wasteType: wasteReport.assignedBin.wasteType,
+                    currentWasteComposition: wasteReport.assignedBin.currentWasteComposition
+                } : null
+            },
+            resident: {
+                name: wasteReport.reportedBy.fullName,
+                contact: wasteReport.reportedBy.phoneNo,
+                address: wasteReport.reportedBy.address
+            },
+            currentProcessingRequest: processingRequestDetails, // Details of the active request for the bin
+            // processingHistory: this would be more complex, perhaps fetching all requests for the assigned bin
+        };
+
+        return res.status(200)
+            .json(new ApiResponse(200, responseData, 'Waste details fetched successfully'));
+
+    } catch (error) {
+        console.error("Error fetching waste details:", error);
+        next(new ApiError(
+            error.statusCode || 500,
+            error.message || 'Error fetching waste details'
+        ));
     }
 };
-// Helper function to calculate distance between two points
+
+// Helper function to calculate distance between two points (Haversine formula)
 function calculateDistance(point1, point2) {
     const [lon1, lat1] = point1;
     const [lon2, lat2] = point2;
@@ -574,102 +937,31 @@ function calculateDistance(point1, point2) {
     return R * c; // Distance in meters
 }
 
-// Helper function to calculate rewards
-function calculateReward(weight, isUseful) {
-    const W = 10; // Base reward for non-useful waste
-    const N = 15; // Base reward for useful waste
-    return Math.floor(isUseful ? N * weight : W * weight);
-}
+// Helper function to calculate rewards (deprecated if residents.controller.js handles it)
+// function calculateReward(weight, isUseful) {
+//     const W = 10; // Base reward for non-useful waste
+//     const N = 15; // Base reward for useful waste
+//     return Math.floor(isUseful ? N * weight : W * weight);
+// }
 
 
-// controllers/wasteController.js
-const getWasteDetails = async (req, res, next) => {
+// controllers/wasteController.js (This function is also in residents.controller.js)
+// NOTE: This function is duplicated in residents.controller.js.
+// It's recommended to use the one in residents.controller.js and remove this one,
+// or clearly define their distinct purposes (e.g., this one for collector's view, other for resident's view).
+// For now, I'm keeping it but noting the duplication.
+
+const getMyProfile = async (req, res, next) => {
     try {
-        const { wasteId } = req.params;
-
-        // Find the waste report and populate basic resident info
-        const wasteReport = await WasteReport.findById(wasteId)
-            .populate('reportedBy', 'fullName phoneNo address')
-            .lean();
-
-        if (!wasteReport) {
-            throw new ApiError(404, 'Waste report not found');
+        const collector = await Collector.findById(req.user._id).select('-password').lean(); // Use lean()
+        if (!collector) {
+            return next(new ApiError(404, 'Collector not found'));
         }
-
-        // Find processing requests for this waste report
-        const processingRequests = await WasteProcessingRequest.find({ wasteReport: wasteId })
-            .populate('vendor', 'companyName processingFacilityLocation address')
-            .populate('collector', 'name vehicleNumber')
-            .sort({ createdAt: -1 }) // Sort by newest first
-            .lean();
-
-        // Corrected version
-        const activeRequest = processingRequests.find(req =>
-            ['pending_vendor', 'accepted'].includes(req.status)
-        ) || (processingRequests.length > 0 ? processingRequests[0] : null);
-
-        // Prepare the response data
-        const responseData = {
-            wasteReport: {
-                _id: wasteReport._id,
-                wasteType: {
-                    userReported: wasteReport.userReportedType,
-                    mlIdentified: wasteReport.mlIdentifiedType,
-                    mlDetails: wasteReport.mlDetails
-                },
-                weight: wasteReport.approximateWeight,
-                status: wasteReport.status,
-                location: {
-                    coordinates: wasteReport.coordinates.coordinates,
-                    address: wasteReport.address,
-                    zone: wasteReport.assignedZone
-                },
-                images: wasteReport.photoUrl,
-                createdAt: wasteReport.createdAt
-            },
-            resident: {
-                name: wasteReport.reportedBy.fullName,
-                contact: wasteReport.reportedBy.phoneNo,
-                address: wasteReport.reportedBy.address
-            },
-            currentProcessing: activeRequest ? {
-                _id: activeRequest._id,
-                status: activeRequest.status,
-                vendor: activeRequest.vendor ? {
-                    _id: activeRequest.vendor._id,
-                    companyName: activeRequest.vendor.companyName,
-                    address: activeRequest.vendor.address,
-                    processingFacilityLocation: activeRequest.vendor.processingFacilityLocation.coordinates
-                } : null,
-                collector: activeRequest.collector || null,
-                createdAt: activeRequest.createdAt
-            } : null,
-            processingHistory: processingRequests.map(req => ({
-                _id: req._id,
-                status: req.status,
-                vendor: req.vendor ? {
-                    companyName: req.vendor.companyName,
-                    location: req.vendor.processingFacilityLocation.coordinates
-                } : null,
-                collector: req.collector ? {
-                    name: req.collector.name,
-                    vehicle: req.collector.vehicleNumber
-                } : null,
-                date: req.createdAt
-            }))
-        };
-
-        return res.status(200)
-            .json(new ApiResponse(200, responseData, 'Waste details fetched successfully'));
-
+        res.status(200).json(new ApiResponse(200, { user: collector }, 'Collector profile fetched'));
     } catch (error) {
-        console.log("error:", error)
-        next(new ApiError(
-            error.statusCode || 500,
-            error.message || 'Error fetching waste details'
-        ));
+        next(new ApiError(500, 'Error fetching collector profile: ' + error.message));
     }
-};
+}
 
 
 export {
@@ -677,6 +969,7 @@ export {
     loginUser,
     logoutUser,
     refreshAccessToken,
+    getMyProfile,
 
     updateLocation,
     getAssignedPickups,
@@ -685,4 +978,5 @@ export {
     getCollectorDashboard,
     getPendingPickupsWithDropoff,
     getWasteDetails,
+    getCollectionHistory,
 };

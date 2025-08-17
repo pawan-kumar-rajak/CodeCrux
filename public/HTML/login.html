@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,12 +9,13 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="/public/CSS/loginstyles.css">
 </head>
+
 <body>
     <div class="login-container">
         <div class="login-background">
             <div class="background-overlay"></div>
         </div>
-        
+
         <div class="login-content">
             <div class="login-header">
                 <a href="/" class="logo">
@@ -49,9 +51,10 @@
                     <div class="input-group">
                         <i class="fas fa-lock"></i>
                         <input type="password" id="password" name="password" placeholder="Enter your password" required>
-                        <button type="button" class="password-toggle" onclick="togglePassword()">
+                        <button type="button" class="password-toggle" onclick="togglePassword('password')">
                             <i class="fas fa-eye"></i>
                         </button>
+
                     </div>
                 </div>
 
@@ -61,7 +64,7 @@
                         <span class="checkmark"></span>
                         Remember me
                     </label>
-                    <a href="/forgot-password.html" class="forgot-link">Forgot Password?</a>
+                    <a href="/public/HTML/forgot-password.html" class="forgot-link">Forgot Password?</a>
                 </div>
 
                 <button type="submit" class="login-button" id="loginButton">
@@ -73,7 +76,7 @@
             </form>
 
             <div class="login-footer">
-                <p>Don't have an account? <a href="/signup.html">Sign up here</a></p>
+                <p>Don't have an account? <a href="/public/HTML/signup.html">Sign up here</a></p>
             </div>
 
             <div class="features-preview">
@@ -105,7 +108,7 @@
                     <h2>Transform Waste into Energy</h2>
                     <p>Join the revolution in sustainable waste management</p>
                 </div>
-                
+
                 <div class="benefits-list">
                     <div class="benefit-item">
                         <div class="benefit-icon">
@@ -116,7 +119,7 @@
                             <p>Reduce carbon footprint and contribute to a cleaner planet</p>
                         </div>
                     </div>
-                    
+
                     <div class="benefit-item">
                         <div class="benefit-icon">
                             <i class="fas fa-bolt"></i>
@@ -126,7 +129,7 @@
                             <p>Convert waste into clean, renewable energy</p>
                         </div>
                     </div>
-                    
+
                     <div class="benefit-item">
                         <div class="benefit-icon">
                             <i class="fas fa-users"></i>
@@ -161,4 +164,5 @@
 
     <script src="/public/JS/login.js"></script>
 </body>
+
 </html>

@@ -366,6 +366,7 @@
     margin: 2% auto;
     padding: 25px;
     width: 80%;
+    height: fit-content;
     max-width: 900px;
     border-radius: 8px;
     position: relative;
@@ -559,6 +560,11 @@
   }
   
   .collector-map {
+    flex: 1;
+    min-width: 300px;
+  }
+
+  .vendor-map {
     flex: 1;
     min-width: 300px;
   }

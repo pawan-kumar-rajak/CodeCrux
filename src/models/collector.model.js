@@ -32,7 +32,17 @@ const collectorSchema = new Schema(
       refreshToken: {
         type: String,
       },
-
+      phoneNo:{
+        type:String,
+        required:true
+      },
+      vehicleNo:{
+        type:String
+      },
+      vehicleType:{
+        type:String,
+        enum: ["Truck", "Van", "Auto Rickshaw", "Bicycle", "Cart", "other"]
+      },
       currentLocation: {
         type: { type: String, enum: ['Point'] },
         coordinates: [Number]

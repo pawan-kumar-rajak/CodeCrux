@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,13 +8,19 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="/public/CSS/signupstyles.css">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
 </head>
+
 <body>
     <div class="signup-container">
         <div class="signup-background">
             <div class="background-overlay"></div>
         </div>
-        
+
         <div class="signup-content">
             <div class="signup-header">
                 <a href="/" class="logo">
@@ -41,14 +48,16 @@
                         <label for="firstName">First Name</label>
                         <div class="input-group">
                             <i class="fas fa-user"></i>
-                            <input type="text" id="firstName" name="firstName" placeholder="Enter your first name" required>
+                            <input type="text" id="firstName" name="firstName" placeholder="Enter your first name"
+                                required>
                         </div>
                     </div>
                     <div class="form-group">
                         <label for="lastName">Last Name</label>
                         <div class="input-group">
                             <i class="fas fa-user"></i>
-                            <input type="text" id="lastName" name="lastName" placeholder="Enter your last name" required>
+                            <input type="text" id="lastName" name="lastName" placeholder="Enter your last name"
+                                required>
                         </div>
                     </div>
                 </div>
@@ -73,7 +82,8 @@
                     <label for="password">Password</label>
                     <div class="input-group">
                         <i class="fas fa-lock"></i>
-                        <input type="password" id="password" name="password" placeholder="Create a strong password" required>
+                        <input type="password" id="password" name="password" placeholder="Create a strong password"
+                            required>
                         <button type="button" class="password-toggle" onclick="togglePassword('password')">
                             <i class="fas fa-eye"></i>
                         </button>
@@ -85,7 +95,8 @@
                     <label for="confirmPassword">Confirm Password</label>
                     <div class="input-group">
                         <i class="fas fa-lock"></i>
-                        <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm your password" required>
+                        <input type="password" id="confirmPassword" name="confirmPassword"
+                            placeholder="Confirm your password" required>
                         <button type="button" class="password-toggle" onclick="togglePassword('confirmPassword')">
                             <i class="fas fa-eye"></i>
                         </button>
@@ -93,87 +104,142 @@
                 </div>
 
                 <!-- Role-specific fields -->
+                <!-- Update the resident fields section -->
                 <div id="residentFields" class="role-fields" style="display: none;">
                     <div class="form-group">
-                        <label for="address">Address</label>
+                        <label for="addressLine">Address</label>
                         <div class="input-group">
                             <i class="fas fa-map-marker-alt"></i>
-                            <input type="text" id="address" name="address" placeholder="Enter your address">
+                            <input type="text" id="addressLine" name="addressLine" placeholder="Enter your address"
+                                required>
                         </div>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="city">City</label>
-                            <input type="text" id="city" name="city" placeholder="Enter your city">
+                    <div class="form-group">
+                        <label for="pincode">Pincode</label>
+                        <div class="input-group">
+                            <i class="fas fa-map-pin"></i>
+                            <input type="number" id="pincode" name="pincode" placeholder="Enter pincode" required>
                         </div>
-                        <div class="form-group">
-                            <label for="pincode">Pincode</label>
-                            <input type="text" id="pincode" name="pincode" placeholder="Enter pincode">
-                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="residentMap">Your Location (Click on map)</label>
+                        <div id="residentMap" style="height: 300px;"></div>
+                        <input type="hidden" id="latitude" name="latitude">
+                        <input type="hidden" id="longitude" name="longitude">
                     </div>
                 </div>
 
+                <!-- Update the collector fields section -->
+                <div id="collectorFields" class="role-fields" style="display: none;">
+                    <div class="form-group">
+                        <label for="employeeId">Employee ID</label>
+                        <div class="input-group">
+                            <i class="fas fa-id-card"></i>
+                            <input type="text" id="employeeId" name="employeeId" placeholder="Enter your employee ID"
+                                required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="assignedZone">Assigned Zone</label>
+                        <select id="assignedZone" name="assignedZone" required>
+                            <option value="">Select your zone</option>
+                            <option value="North Zone">North Zone</option>
+                            <option value="South Zone">South Zone</option>
+                            <option value="East Zone">East Zone</option>
+                            <option value="West Zone">West Zone</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="vehicleNo">Vehicle Number</label>
+                        <div class="input-group">
+                            <i class="fas fa-truck"></i>
+                            <input type="text" id="vehicleNo" name="vehicleNo" placeholder="Enter vehicle number"
+                                required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="vehicleType">Vehicle Type</label>
+                        <select id="vehicleType" name="vehicleType" required>
+                            <option value="">Select vehicle type</option>
+                            <option value="Truck">Truck</option>
+                            <option value="Van">Van</option>
+                            <option value="Auto Rickshaw">Auto Rickshaw</option>
+                            <option value="Bicycle">Bicycle</option>
+                            <option value="Cart">Cart</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="collectorMap">Current Location (Click on map)</label>
+                        <div id="collectorMap" style="height: 300px;"></div>
+                        <input type="hidden" id="collectorLatitude" name="collectorLatitude">
+                        <input type="hidden" id="collectorLongitude" name="collectorLongitude">
+                    </div>
+                </div>
+
+                <!-- Update the vendor fields section -->
                 <div id="vendorFields" class="role-fields" style="display: none;">
                     <div class="form-group">
                         <label for="companyName">Company Name</label>
                         <div class="input-group">
                             <i class="fas fa-building"></i>
-                            <input type="text" id="companyName" name="companyName" placeholder="Enter company name">
+                            <input type="text" id="companyName" name="companyName" placeholder="Enter company name"
+                                required>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="processingType">Processing Type</label>
-                        <select id="processingType" name="processingType">
-                            <option value="">Select processing type</option>
+                        <label for="licenseNo">License Number</label>
+                        <div class="input-group">
+                            <i class="fas fa-file-alt"></i>
+                            <input type="text" id="licenseNo" name="licenseNo" placeholder="Enter license number"
+                                required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="vendorAddress">Company Address</label>
+                        <div class="input-group">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <input type="text" id="vendorAddress" name="vendorAddress"
+                                placeholder="Enter company address" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="processingMethod">Processing Method</label>
+                        <select id="processingMethod" name="processingMethod" required>
+                            <option value="">Select processing method</option>
                             <option value="torrefaction">Torrefaction</option>
                             <option value="biogas">Biogas Production</option>
                             <option value="recycling">Recycling</option>
                             <option value="composting">Composting</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label for="capacity">Processing Capacity (kg/day)</label>
-                        <input type="number" id="capacity" name="capacity" placeholder="Enter daily capacity">
-                    </div>
-                </div>
 
-                <div id="collectorFields" class="role-fields" style="display: none;">
                     <div class="form-group">
-                        <label for="vehicleNumber">Vehicle Number</label>
-                        <div class="input-group">
-                            <i class="fas fa-truck"></i>
-                            <input type="text" id="vehicleNumber" name="vehicleNumber" placeholder="Enter vehicle number">
+                        <label for="requiredWasteTypes">Accepted Waste Types (press CTRL + click )</label>
+                        <div class="multiselect-wrapper">
+                            <select id="requiredWasteTypes" name="requiredWasteTypes" multiple required>
+                                <option value="E-waste">E-waste</option>
+                                <option value="automobile wastes">Automobile Wastes</option>
+                                <option value="battery waste">Battery Waste</option>
+                                <option value="glass waste">Glass Waste</option>
+                                <option value="light bulbs">Light Bulbs</option>
+                                <option value="metal waste">Metal Waste</option>
+                                <option value="organic waste">Organic Waste</option>
+                                <option value="paper waste">Paper Waste</option>
+                                <option value="plastic waste">Plastic Waste</option>
+                            </select>
+                            <div class="selected-tags" id="selectedWasteTags"></div>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="vehicleType">Vehicle Type</label>
-                        <select id="vehicleType" name="vehicleType">
-                            <option value="">Select vehicle type</option>
-                            <option value="truck">Truck</option>
-                            <option value="van">Van</option>
-                            <option value="auto">Auto Rickshaw</option>
-                            <option value="bicycle">Bicycle</option>
-                        </select>
+                        <label for="vendorMap">Processing Facility Location (Click on map)</label>
+                        <div id="vendorMap" style="height: 300px;"></div>
+                        <input type="hidden" id="facilityLatitude" name="facilityLatitude">
+                        <input type="hidden" id="facilityLongitude" name="facilityLongitude">
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label class="checkbox-container">
-                        <input type="checkbox" id="termsAccepted" name="termsAccepted" required>
-                        <span class="checkmark"></span>
-                        I agree to the <a href="/terms.html" target="_blank">Terms of Service</a> and <a href="/privacy.html" target="_blank">Privacy Policy</a>
-                    </label>
-                </div>
-
-                <div class="form-group">
-                    <label class="checkbox-container">
-                        <input type="checkbox" id="newsletter" name="newsletter">
-                        <span class="checkmark"></span>
-                        Subscribe to our newsletter for updates and tips
-                    </label>
-                </div>
-
-                <button type="submit" class="signup-button">
+                <button type="submit" class="signup-button" id="signupButton">
                     <span class="button-text">Create Account</span>
                     <span class="button-loader" style="display: none;">
                         <i class="fas fa-spinner fa-spin"></i>
@@ -214,7 +280,7 @@
                     <h2>Be Part of the Solution</h2>
                     <p>Join thousands of users already making a difference</p>
                 </div>
-                
+
                 <div class="benefits-list">
                     <div class="benefit-item">
                         <div class="benefit-icon">
@@ -225,7 +291,7 @@
                             <p>Get points for every waste report and redeem them for rewards</p>
                         </div>
                     </div>
-                    
+
                     <div class="benefit-item">
                         <div class="benefit-icon">
                             <i class="fas fa-chart-bar"></i>
@@ -235,7 +301,7 @@
                             <p>Monitor your environmental impact with detailed analytics</p>
                         </div>
                     </div>
-                    
+
                     <div class="benefit-item">
                         <div class="benefit-icon">
                             <i class="fas fa-shield-alt"></i>
@@ -267,7 +333,12 @@
 
     <!-- Success/Error Messages -->
     <div id="messageContainer" class="message-container"></div>
-
+    <!-- Add these to the head section of signup.html -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.locatecontrol/dist/L.Control.Locate.min.css" />
+    <script src="https://unpkg.com/leaflet.locatecontrol/dist/L.Control.Locate.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-easybutton@2/src/easy-button.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-easybutton@2/src/easy-button.css">
     <script src="/public/JS/signup.js"></script>
 </body>
+
 </html>

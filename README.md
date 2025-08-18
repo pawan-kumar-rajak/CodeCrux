@@ -297,7 +297,7 @@ CodeCrux/
 ### 1️⃣ Clone the Repository
 
 ```sh
-git clone https://github.com/Gajendra-0/Garbage_Detector.git
+git clone https://github.com/pawan-kumar-rajak/CodeCrux
 cd CodeCrux
 ```
 

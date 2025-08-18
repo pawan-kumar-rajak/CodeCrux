@@ -7,7 +7,7 @@
   <title>Admin Dashboard | CleanCity</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
   <!-- Link to your CSS file -->
   <link rel="stylesheet" href="/public/CSS/admin.dashboard.css">
 </head>
@@ -66,30 +66,52 @@
       </header>
 
       <!-- Stats Cards -->
+      <!-- Replace the stats-container div with this -->
+      <!-- Replace the stats-container div with this -->
       <div class="stats-container" id="dashboardStats">
-        <div class="stat-card">
-          <h3>Total Reports</h3>
-          <div class="stat-value" id="totalReports">0</div>
+        <!-- Stats Cards Row -->
+        <div class="stats-row">
+          <div class="stat-card">
+            <h3>Total Reports</h3>
+            <div class="stat-value" id="totalReports">0</div>
+          </div>
+          <div class="stat-card">
+            <h3>Pending Approval</h3>
+            <div class="stat-value" id="pendingApproval">0</div>
+          </div>
+          <div class="stat-card">
+            <h3>Active Collectors</h3>
+            <div class="stat-value" id="activeCollectors">0</div>
+          </div>
+          <div class="stat-card">
+            <h3>Registered Users</h3>
+            <div class="stat-value" id="registeredUsers">0</div>
+          </div>
+          <div class="stat-card">
+            <h3>Total Requests</h3>
+            <div class="stat-value" id="totalRequests">0</div>
+          </div>
+          <div class="stat-card">
+            <h3>Expired Requests</h3>
+            <div class="stat-value" id="expiredRequests">0</div>
+          </div>
         </div>
-        <div class="stat-card">
-          <h3>Pending Approval</h3>
-          <div class="stat-value" id="pendingApproval">0</div>
-        </div>
-        <div class="stat-card">
-          <h3>Active Collectors</h3>
-          <div class="stat-value" id="activeCollectors">0</div>
-        </div>
-        <div class="stat-card">
-          <h3>Registered Users</h3>
-          <div class="stat-value" id="registeredUsers">0</div>
-        </div>
-        <div class="stat-card">
-          <h3>Total Requests</h3>
-          <div class="stat-value" id="totalRequests">0</div>
-        </div>
-        <div class="stat-card">
-          <h3>Expired Requests</h3>
-          <div class="stat-value" id="expiredRequests">0</div>
+
+        <!-- Charts Row -->
+        <div class="charts-row">
+          <div class="chart-card">
+            <h3>Environmental Impact</h3>
+            <div class="chart-container">
+              <canvas id="impactChart"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-card">
+            <h3>Daily CO₂ Reduction</h3>
+            <div class="chart-container">
+              <canvas id="co2Chart"></canvas>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -137,13 +159,13 @@
         <!-- Content loaded by JS -->
       </section>
 
-       <!-- Vendors Section (will be dynamically loaded) -->
-       <section class="vendors-section" id="vendors-section-content" style="display:none;">
+      <!-- Vendors Section (will be dynamically loaded) -->
+      <section class="vendors-section" id="vendors-section-content" style="display:none;">
         <!-- Content loaded by JS -->
       </section>
 
-       <!-- Settings Section (will be dynamically loaded) -->
-       <section class="settings-section" id="settings-section-content" style="display:none;">
+      <!-- Settings Section (will be dynamically loaded) -->
+      <section class="settings-section" id="settings-section-content" style="display:none;">
         <!-- Content loaded by JS -->
       </section>
 
@@ -163,25 +185,41 @@
         <!-- Details Section -->
         <div class="garbage-info">
           <h2>Waste Report Details</h2>
-          <div class="detail-row"><span class="detail-label">Report ID:</span><span id="detail-id" class="detail-value"></span></div>
-          <div class="detail-row"><span class="detail-label">Reported By:</span><span id="detail-reportedBy" class="detail-value"></span></div>
-          <div class="detail-row"><span class="detail-label">Phone:</span><span id="detail-phone" class="detail-value"></span></div>
-          <div class="detail-row"><span class="detail-label">User Reported Type:</span><span id="detail-userType" class="detail-value"></span></div>
-          <div class="detail-row"><span class="detail-label">ML Identified Type:</span><span id="detail-mlType" class="detail-value"></span></div>
-          <div class="detail-row"><span class="detail-label">Weight:</span><span id="detail-weight" class="detail-value"></span></div>
-          <div class="detail-row"><span class="detail-label">Zone:</span><span id="detail-zone" class="detail-value"></span></div>
-          <div class="detail-row"><span class="detail-label">Coordinates:</span><span id="detail-coordinates" class="detail-value"></span></div>
-          <div class="detail-row"><span class="detail-label">Reported On:</span><span id="detail-date" class="detail-value"></span></div>
-          <div class="detail-row"><span class="detail-label">Status:</span><span id="detail-status" class="status-badge"></span></div>
-          <div class="detail-row"><span class="detail-label">Recyclable:</span><span id="detail-recyclable" class="detail-value"></span></div>
-          
+          <div class="detail-row"><span class="detail-label">Report ID:</span><span id="detail-id"
+              class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Reported By:</span><span id="detail-reportedBy"
+              class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Phone:</span><span id="detail-phone"
+              class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">User Reported Type:</span><span id="detail-userType"
+              class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">ML Identified Type:</span><span id="detail-mlType"
+              class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Weight:</span><span id="detail-weight"
+              class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Zone:</span><span id="detail-zone"
+              class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Coordinates:</span><span id="detail-coordinates"
+              class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Reported On:</span><span id="detail-date"
+              class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Status:</span><span id="detail-status"
+              class="status-badge"></span></div>
+          <div class="detail-row"><span class="detail-label">Recyclable:</span><span id="detail-recyclable"
+              class="detail-value"></span></div>
+
           <!-- ML Details -->
           <h3>ML Analysis Details</h3>
-          <div class="detail-row"><span class="detail-label">Confidence:</span><span id="detail-confidence" class="detail-value"></span></div>
-          <div class="detail-row"><span class="detail-label">Energy Potential:</span><span id="detail-energyPotential" class="detail-value"></span></div>
-          <div class="detail-row"><span class="detail-label">CO2 Reduction:</span><span id="detail-co2Reduction" class="detail-value"></span></div>
-          <div class="detail-row"><span class="detail-label">Fraudulent:</span><span id="detail-fraudulent" class="detail-value"></span></div>
-          <div class="detail-row"><span class="detail-label">Fraud Score:</span><span id="detail-fraudScore" class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Confidence:</span><span id="detail-confidence"
+              class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Energy Potential:</span><span id="detail-energyPotential"
+              class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">CO2 Reduction:</span><span id="detail-co2Reduction"
+              class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Fraudulent:</span><span id="detail-fraudulent"
+              class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Fraud Score:</span><span id="detail-fraudScore"
+              class="detail-value"></span></div>
 
           <!-- Waste Type Selection for Approval -->
           <div class="detail-row">
@@ -222,13 +260,21 @@
         <!-- Collector Info Section -->
         <div class="collector-info">
           <h2>Collector Details</h2>
-          <div class="detail-row"><span class="detail-label">Employee ID:</span><span id="collector-employeeId" class="detail-value"></span></div>
-          <div class="detail-row"><span class="detail-label">Full Name:</span><span id="collector-fullName" class="detail-value"></span></div>
-          <div class="detail-row"><span class="detail-label">Email:</span><span id="collector-email" class="detail-value"></span></div>
-          <div class="detail-row"><span class="detail-label">Assigned Zone:</span><span id="collector-zone" class="detail-value"></span></div>
-          <div class="detail-row"><span class="detail-label">Current Location:</span><span id="collector-location" class="detail-value"></span></div>
-          <div class="detail-row"><span class="detail-label">Assigned Pickups:</span><div id="collector-pickups" class="detail-value"></div></div>
-          <div class="detail-row"><span class="detail-label">Member Since:</span><span id="collector-createdAt" class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Employee ID:</span><span id="collector-employeeId"
+              class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Full Name:</span><span id="collector-fullName"
+              class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Email:</span><span id="collector-email"
+              class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Assigned Zone:</span><span id="collector-zone"
+              class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Current Location:</span><span id="collector-location"
+              class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Assigned Pickups:</span>
+            <div id="collector-pickups" class="detail-value"></div>
+          </div>
+          <div class="detail-row"><span class="detail-label">Member Since:</span><span id="collector-createdAt"
+              class="detail-value"></span></div>
         </div>
         <!-- Map Section (optional) -->
         <div class="collector-map">
@@ -258,15 +304,25 @@
         <!-- Collector Info Section -->
         <div class="collector-info">
           <h2>Vendor Details</h2>
-          <div class="detail-row"><span class="detail-label">ID:</span><span id="vendor-employeeId" class="detail-value"></span></div>
-          <div class="detail-row"><span class="detail-label">company Name:</span><span id="vendor-companyName" class="detail-value"></span></div>
-          <div class="detail-row"><span class="detail-label">licenseNo:</span><span id="vendor-licenseNo" class="detail-value"></span></div>
-          <div class="detail-row"><span class="detail-label">Email:</span><span id="vendor-email" class="detail-value"></span></div>
-          <div class="detail-row"><span class="detail-label">address:</span><span id="vendor-address" class="detail-value"></span></div>
-          <div class="detail-row"><span class="detail-label">processing Method:</span><span id="vendor-processingMethod" class="detail-value"></span></div>
-          <div class="detail-row"><span class="detail-label">Current Location:</span><span id="vendor-location" class="detail-value"></span></div>
-          <div class="detail-row"><span class="detail-label">certifications:</span><div id="vendor-certifications" class="detail-value"></div></div>
-          <div class="detail-row"><span class="detail-label">Member Since:</span><span id="vendor-createdAt" class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">ID:</span><span id="vendor-employeeId"
+              class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">company Name:</span><span id="vendor-companyName"
+              class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">licenseNo:</span><span id="vendor-licenseNo"
+              class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Email:</span><span id="vendor-email"
+              class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">address:</span><span id="vendor-address"
+              class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">processing Method:</span><span id="vendor-processingMethod"
+              class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">Current Location:</span><span id="vendor-location"
+              class="detail-value"></span></div>
+          <div class="detail-row"><span class="detail-label">certifications:</span>
+            <div id="vendor-certifications" class="detail-value"></div>
+          </div>
+          <div class="detail-row"><span class="detail-label">Member Since:</span><span id="vendor-createdAt"
+              class="detail-value"></span></div>
         </div>
         <!-- Map Section (optional) -->
         <div class="vendor-map">
@@ -280,11 +336,11 @@
         <button id="reassignCollectorBtn" class="btn btn-warning">
           <i class="fas fa-random"></i> Reassign Zone
         </button> -->
-        <button id="messageVendorBtn" class="btn btn-primary">
-          <i class="fas fa-envelope"></i> Send Message
-        </button>
-      </div>
+      <button id="messageVendorBtn" class="btn btn-primary">
+        <i class="fas fa-envelope"></i> Send Message
+      </button>
     </div>
+  </div>
   </div>
 
 
@@ -300,8 +356,10 @@
   <!-- Snackbar for notifications -->
   <div id="snackbar"></div>
 
-  <!-- Link to your JavaScript file -->
-   <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="/public/JS/admin.dashboard.js"></script>
 </body>
 

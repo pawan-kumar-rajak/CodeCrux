@@ -38,10 +38,10 @@ const registerCollector = asyncHandler(async (req, res, next) => {
         session.startTransaction();
 
         // Extract fields from the request body
-        const { employeeId, fullName, email, password, assignedZone, currentLocation } = req.body;
+        const { employeeId, fullName, email, password, assignedZone, currentLocation, vehicleNo, vehicleType, phoneNo } = req.body;
 
         // Validate required fields
-        if (!employeeId || !fullName || !email || !password || !assignedZone || !currentLocation) {
+        if (!employeeId || !fullName || !email || !password || !assignedZone || !currentLocation || phoneNo) {
             return next(new ApiError(400, "All required fields must be provided"));
         }
 
@@ -66,6 +66,9 @@ const registerCollector = asyncHandler(async (req, res, next) => {
                 password,
                 assignedZone,
                 role: "collector",  // Default role for collector
+                phoneNo:phoneNo,
+                vehicleNo:vehicleNo,
+                vehicleType:vehicleType,
                 currentLocation: {
                     type: "Point",
                     coordinates: parsedCoordinates

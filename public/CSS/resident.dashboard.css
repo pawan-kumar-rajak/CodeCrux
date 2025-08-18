@@ -22,10 +22,15 @@
 
 body {
   font-family: 'Inter', sans-serif;
+  background: 
+    linear-gradient(rgba(255,255,255,0.2), rgba(255,255,255,0.2)),
+    url('/public/Images/green.jpg') center center/cover no-repeat;
   background-color: var(--bg-light);
   color: var(--text-dark);
   line-height: 1.6;
   padding: 20px;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .dashboard-container {

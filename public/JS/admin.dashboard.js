@@ -51,22 +51,22 @@ let currentReportId = null;
 let currentCollectorId = null;
 
 document.addEventListener('DOMContentLoaded', async function() {
-    // Load admin profile and dashboard stats initially
+    // First load the admin profile
     await loadAdminProfile();
-    await loadDashboardStats();
     
-    // Setup navigation event listeners
+    // Then load dashboard stats and pending reports
+    await Promise.all([
+        loadDashboardStats(),
+        loadPendingReports()
+    ]);
+    
+    // Setup navigation and overlay listeners
     setupNavigation();
-    
-    // Load default section content (Dashboard or Waste Reports)
-    // Based on your HTML, 'Waste Reports' is the initial visible section
-    await loadSectionContent('Dashboard'); // Load dashboard content first
-    await loadSectionContent('Waste Reports'); // Then load reports to populate the table
-
-    // Setup overlay event listeners
     setupOverlayEventListeners();
+    
+    // Force a resize event to ensure charts render properly
+    window.dispatchEvent(new Event('resize'));
 });
-
 async function loadAdminProfile() {
     try {
         const response = await fetch('http://localhost:5000/api/v1/admin/me', {
@@ -92,19 +92,51 @@ async function loadAdminProfile() {
     }
 }
 
+// async function loadDashboardStats() {
+//     try {
+//         const response = await fetch('http://localhost:5000/api/v1/admin/get_admin_dashboard', {
+//             credentials: 'include'
+//         });
+
+//         if (!response.ok) {
+//             throw new Error('Failed to fetch dashboard stats');
+//         }
+
+//         const data = await response.json();
+//         const stats = data.data;
+
+//         document.getElementById('totalReports').textContent = stats.totalReports || 0;
+//         document.getElementById('pendingApproval').textContent = stats.pendingApproval || 0;
+//         document.getElementById('activeCollectors').textContent = stats.activeCollectors || 0;
+//         document.getElementById('registeredUsers').textContent = stats.registeredUsers || 0;
+//         document.getElementById('totalRequests').textContent = stats.totalRequests || 0;
+//         document.getElementById('expiredRequests').textContent = stats.expiredRequests || 0;
+
+//     } catch (error) {
+//         console.error('Error loading dashboard stats:', error);
+//         showSnackbar('Error loading dashboard statistics.', 'error');
+//     }
+// }
+
+// Add these global variables at the top
+let impactChart = null;
+let co2Chart = null;
+
+// Update the loadDashboardStats function
 async function loadDashboardStats() {
     try {
-        const response = await fetch('http://localhost:5000/api/v1/admin/get_admin_dashboard', {
+        // Load basic stats
+        const statsResponse = await fetch('http://localhost:5000/api/v1/admin/get_admin_dashboard', {
             credentials: 'include'
         });
 
-        if (!response.ok) {
+        if (!statsResponse.ok) {
             throw new Error('Failed to fetch dashboard stats');
         }
 
-        const data = await response.json();
-        const stats = data.data;
-
+        const statsData = await statsResponse.json();
+        const stats = statsData.data;
+        console.log("stats:",stats)
         document.getElementById('totalReports').textContent = stats.totalReports || 0;
         document.getElementById('pendingApproval').textContent = stats.pendingApproval || 0;
         document.getElementById('activeCollectors').textContent = stats.activeCollectors || 0;
@@ -112,10 +144,100 @@ async function loadDashboardStats() {
         document.getElementById('totalRequests').textContent = stats.totalRequests || 0;
         document.getElementById('expiredRequests').textContent = stats.expiredRequests || 0;
 
+        // Load environmental impact data
+        const impactResponse = await fetch('http://localhost:5000/api/v1/admin/get-environmental-impact', {
+            credentials: 'include'
+        });
+
+        if (!impactResponse.ok) {
+            throw new Error('Failed to fetch environmental impact data');
+        }
+
+        const impactData = await impactResponse.json();
+        renderCharts(impactData.data);
+
     } catch (error) {
         console.error('Error loading dashboard stats:', error);
         showSnackbar('Error loading dashboard statistics.', 'error');
     }
+}
+
+// Add this new function to render charts
+function renderCharts(impactData) {
+    const ctx1 = document.getElementById('impactChart').getContext('2d');
+    const ctx2 = document.getElementById('co2Chart').getContext('2d');
+    
+    // Destroy existing charts if they exist
+    if (impactChart) impactChart.destroy();
+    if (co2Chart) co2Chart.destroy();
+
+    // Overall Impact Chart
+    impactChart = new Chart(ctx1, {
+        type: 'bar',
+        data: {
+            labels: ['Energy Generated (kWh)', 'CO₂ Reduced (kg)', 'Reports Processed'],
+            datasets: [{
+                label: 'Environmental Impact',
+                data: [
+                    impactData.overall.totalEnergyGenerated,
+                    impactData.overall.totalCo2Reduced,
+                    impactData.overall.totalReportsProcessed
+                ],
+                backgroundColor: [
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(75, 192, 192, 0.7)',
+                    'rgba(153, 102, 255, 0.7)'
+                ],
+                borderColor: [
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(153, 102, 255, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Daily CO₂ Reduction Chart
+    const dailyData = impactData.daily;
+    const labels = dailyData.map(item => {
+        return `${item._id.month}/${item._id.day}/${item._id.year}`;
+    });
+    const co2Data = dailyData.map(item => item.totalCo2Reduced);
+
+    co2Chart = new Chart(ctx2, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Daily CO₂ Reduction (kg)',
+                data: co2Data,
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 2,
+                tension: 0.1,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
 }
 
 async function loadPendingReports() {
@@ -201,15 +323,19 @@ async function loadSectionContent(sectionName) {
     settingsSection.style.display = 'none';
 
     // Update header based on section
-    mainContent.querySelector('.content-header h1').textContent = sectionName.charAt(0).toUpperCase() + sectionName.slice(1) + ' Management';
+    const header = mainContent.querySelector('.content-header h1');
+    if (sectionName.toLowerCase() === 'dashboard') {
+        header.textContent = 'Admin Dashboard';
+    } else {
+        header.textContent = sectionName.charAt(0).toUpperCase() + sectionName.slice(1) + ' Management';
+    }
 
-    switch(sectionName) {
+    switch(sectionName.toLowerCase()) {
         case 'dashboard':
-            dashboardStats.style.display = 'grid'; // Display as grid
-            reportsSection.style.display = 'block'; // Keep reports visible on dashboard for quick access
-            mainContent.querySelector('.content-header h1').textContent = 'Admin Dashboard'; // Specific title for dashboard
+            dashboardStats.style.display = 'grid';
+            reportsSection.style.display = 'block';
             await loadDashboardStats();
-            await loadPendingReports(); // Refresh pending reports on dashboard view
+            await loadPendingReports();
             break;
         case 'reports':
             reportsSection.style.display = 'block';

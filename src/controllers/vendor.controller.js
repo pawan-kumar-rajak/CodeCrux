@@ -408,10 +408,9 @@ const getAvailableWaste = asyncHandler(async (req, res, next) => {
 
 
 // Request waste collection
-// MODIFIED FUNCTION: Improved logic and error handling for requesting bin collections
+// MODIFIED FUNCTION: Assigns the closest collector instead of a random one.
 const requestWasteCollection = asyncHandler(async (req, res, next) => {
     let { binIds } = req.body;
-    
 
     if (!Array.isArray(binIds) || binIds.length === 0) {
         return next(new ApiError(400, 'binIds must be a non-empty array.'));
@@ -447,25 +446,40 @@ const requestWasteCollection = asyncHandler(async (req, res, next) => {
             continue;
         }
 
-        // Find an available collector in the bin's zone
-        const collector = await Collector.findOne({ assignedZone: bin.assignedZone });
+        // Find the collector in the correct zone who is closest to the bin.
+        let closestCollector = await Collector.findOne({
+            assignedZone: bin.assignedZone,
+            currentLocation: {
+                $nearSphere: {
+                    $geometry: bin.location, 
+                    // Optional: Set a max distance in meters (e.g., 5km)
+                    // $maxDistance: 5000
+                }
+            }
+        });
+        
+        
 
-        if (!collector) {
-            failedRequests.push({ binId, reason: `No collector available in zone '${bin.assignedZone}' for Bin ${bin.binId}.` });
-            continue; // Stop processing this bin if no collector can be assigned
+        if (!closestCollector) {
+            closestCollector = await Collector.findOne({ assignedZone: bin.assignedZone });
+            if(!closestCollector){
+
+                failedRequests.push({ binId, reason: `No collectors are currently available or nearby in zone '${bin.assignedZone}' for Bin ${bin.binId}.` });
+                continue ;
+            }
         }
 
-        // All checks passed, create the request and assign it
+        // All checks passed, create the request and assign it to the closest collector
         const newRequest = await WasteProcessingRequest.create({
             bin: binId,
             vendor: req.user._id,
-            collector: collector._id,
+            collector: closestCollector._id, // Assign to the closest one found
             status: 'collector_assigned',
             requestedWasteWeight: Object.values(bin.currentWasteComposition || {}).reduce((sum, val) => sum + val, 0),
             requestedWasteType: bin.wasteType
         });
 
-        await Collector.findByIdAndUpdate(collector._id, {
+        await Collector.findByIdAndUpdate(closestCollector._id, {
             $push: { assignedPickups: newRequest._id }
         });
 
@@ -482,7 +496,7 @@ const requestWasteCollection = asyncHandler(async (req, res, next) => {
         return next(new ApiError(400, `No valid bins could be requested. First error: ${errorReason}`));
     }
 
-    res.status(201).json(new ApiResponse(201, { successfullyRequested, failedRequests }, 'Collection request processed.'));
+    res.status(201).json(new ApiResponse(201, { successfullyRequested, failedRequests }, 'Collection request processed and assigned to the closest available collectors.'));
 });
 
 
@@ -506,6 +520,8 @@ const getVendorDashboard = asyncHandler(async (req, res, next) => {
                                     .sort({ createdAt: -1 }).limit(5).lean();
 
         const dashboardData = {
+            userId: vendor._id,
+            companyName:vendor.companyName,
             totalRequests: totalRequestsMade,
             pendingRequests: pendingRequests,
             deliveredRequests: deliveredRequests,
@@ -786,6 +802,36 @@ const markProcessingComplete = asyncHandler(async (req, res, next) => {
     res.status(200).json(new ApiResponse(200, {}, 'Waste processing marked as complete.'));
 });
 
+// NEW FUNCTION: Gets exhaustive details for a single WasteProcessingRequest.
+const getProcessingRequestDetails = asyncHandler(async (req, res, next) => {
+    const { requestId } = req.params;
+    const vendorId = req.user._id;
+
+    if (!mongoose.Types.ObjectId.isValid(requestId)) {
+        return next(new ApiError(400, "Invalid Request ID format."));
+    }
+
+    const requestDetails = await WasteProcessingRequest.findById(requestId)
+        .populate({
+            path: 'bin',
+            select: 'binId location fillLevel currentWasteComposition',
+           
+        })
+        .populate('collector', 'fullName employeeId email phoneNo vehicleNo vehicleType')
+        .lean();
+
+    if (!requestDetails) {
+        return next(new ApiError(404, "Processing request not found."));
+    }
+
+    // Security check: Ensure the request belongs to the vendor asking for it.
+    if (requestDetails.vendor.toString() !== vendorId.toString()) {
+        return next(new ApiError(403, "You are not authorized to view this request."));
+    }
+
+    return res.status(200).json(new ApiResponse(200, requestDetails, "Processing request details fetched successfully."));
+});
+
 export {
     registerVendor,
     loginUser,
@@ -797,5 +843,6 @@ export {
     getVendorDashboard,
     rejectWasteRequest,
     viewGarbageDetails,
-    markProcessingComplete
+    markProcessingComplete,
+    getProcessingRequestDetails 
 };

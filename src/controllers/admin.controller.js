@@ -639,6 +639,135 @@ const getAllVendors = asyncHandler(async (req, res, next) => {
     res.status(200).json(new ApiResponse(200, vendors, 'All vendors fetched successfully'));
 });
 
+// NEW FUNCTION: Aggregates environmental impact data for the admin dashboard.
+const getEnvironmentalImpactStats = asyncHandler(async (req, res, next) => {
+    try {
+        // --- Daily Aggregation Pipeline ---
+        const dailyStats = await WasteProcessingRequest.aggregate([
+            {
+                // 1. Filter for only completed and processed requests
+                $match: {
+                    status: 'processed_by_vendor',
+                    'processingCompletionDetails.timestamp': { $exists: true }
+                }
+            },
+            {
+                // 2. Group by date (Year, Month, Day)
+                $group: {
+                    _id: {
+                        year: { $year: "$processingCompletionDetails.timestamp" },
+                        month: { $month: "$processingCompletionDetails.timestamp" },
+                        day: { $dayOfMonth: "$processingCompletionDetails.timestamp" }
+                    },
+                    // 3. Sum the metrics for each day
+                    totalEnergyGenerated: { $sum: "$processingCompletionDetails.energyGenerated" },
+                    totalCo2Reduced: { $sum: "$processingCompletionDetails.co2Reduced" },
+                    reportsProcessed: { $sum: 1 }
+                }
+            },
+            {
+                // 4. Sort by date
+                $sort: {
+                    "_id.year": 1,
+                    "_id.month": 1,
+                    "_id.day": 1
+                }
+            }
+        ]);
+
+        // --- Monthly Aggregation Pipeline ---
+        const monthlyStats = await WasteProcessingRequest.aggregate([
+            {
+                $match: {
+                    status: 'processed_by_vendor',
+                    'processingCompletionDetails.timestamp': { $exists: true }
+                }
+            },
+            {
+                // Group by month instead of day
+                $group: {
+                    _id: {
+                        year: { $year: "$processingCompletionDetails.timestamp" },
+                        month: { $month: "$processingCompletionDetails.timestamp" }
+                    },
+                    totalEnergyGenerated: { $sum: "$processingCompletionDetails.energyGenerated" },
+                    totalCo2Reduced: { $sum: "$processingCompletionDetails.co2Reduced" },
+                    reportsProcessed: { $sum: 1 },
+                    
+                }
+            },
+            {
+                $sort: {
+                    "_id.year": 1,
+                    "_id.month": 1
+                }
+            }
+        ]);
+
+        // --- Overall Totals ---
+        // Calculate total weight processed (by vendor) and total weight landfilled
+        const overallStats = await WasteProcessingRequest.aggregate([
+            {
+            $match: { status: 'processed_by_vendor' }
+            },
+            {
+            $group: {
+                _id: null,
+                totalEnergyGenerated: { $sum: "$processingCompletionDetails.energyGenerated" },
+                totalCo2Reduced: { $sum: "$processingCompletionDetails.co2Reduced" },
+                totalReportsProcessed: { $sum: 1 },
+                totalWeightProcessed: { $sum: "$requestedWasteWeight" }
+            }
+            }
+        ]);
+
+        // Calculate total weight landfilled (from WasteReports with status 'landfilled')
+        const landfilledStats = await WasteReport.aggregate([
+            {
+            $match: { status: 'landfilled' }
+            },
+            {
+            $group: {
+                _id: null,
+                totalWeightLandfilled: { $sum: "$requestedWasteWeight" }
+            }
+            }
+        ]);
+
+        // Merge processed and landfilled weights for total weight reduced
+        const totalWeightProcessed = overallStats[0]?.totalWeightProcessed || 0;
+        const totalWeightLandfilled = landfilledStats[0]?.totalWeightLandfilled || 0;
+        const totalWeightReduced = totalWeightProcessed + totalWeightLandfilled;
+
+        // Add to response
+        if (overallStats[0]) {
+            overallStats[0].totalWeightLandfilled = totalWeightLandfilled;
+            overallStats[0].totalWeightReduced = totalWeightReduced;
+        } else {
+            overallStats[0] = {
+            totalEnergyGenerated: 0,
+            totalCo2Reduced: 0,
+            totalReportsProcessed: 0,
+            totalWeightProcessed: 0,
+            totalWeightLandfilled,
+            totalWeightReduced
+            };
+        }
+
+
+        const responseData = {
+            overall: overallStats[0] || { totalEnergyGenerated: 0, totalCo2Reduced: 0, totalReportsProcessed: 0 },
+            daily: dailyStats,
+            monthly: monthlyStats
+        };
+
+        return res.status(200).json(new ApiResponse(200, responseData, "Environmental impact stats fetched successfully."));
+
+    } catch (error) {
+        return next(new ApiError(500, "Error fetching environmental impact statistics: " + error.message));
+    }
+});
+
 
 export{
     registerUser,
@@ -660,4 +789,5 @@ export{
     getAllVendors,
     getVendorDetails,
     getResidentDetails,
+    getEnvironmentalImpactStats
 }

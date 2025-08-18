@@ -1,5 +1,5 @@
 // Signup Page JavaScript
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const signupForm = document.getElementById('signupForm');
     const userTypeSelect = document.getElementById('userType');
     const firstNameInput = document.getElementById('firstName');
@@ -20,11 +20,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const vendorFields = document.getElementById('vendorFields');
     const collectorFields = document.getElementById('collectorFields');
 
+    setupWasteTypeMultiSelect();
+
     // Password toggle functionality
     function togglePassword(inputId) {
         const input = document.getElementById(inputId);
         const toggleButton = input.parentElement.querySelector('.password-toggle i');
-        
+
         if (input.type === 'password') {
             input.type = 'text';
             toggleButton.className = 'fas fa-eye-slash';
@@ -45,9 +47,9 @@ document.addEventListener('DOMContentLoaded', function() {
             <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'exclamation-triangle'}"></i>
             <span>${message}</span>
         `;
-        
+
         messageContainer.appendChild(messageElement);
-        
+
         // Auto remove after 5 seconds
         setTimeout(() => {
             if (messageElement.parentNode) {
@@ -90,24 +92,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show/hide role-specific fields
     function toggleRoleFields(userType) {
-        // Hide all role fields first
         [residentFields, vendorFields, collectorFields].forEach(field => {
             if (field) field.style.display = 'none';
         });
 
-        // Show relevant fields based on user type
         switch (userType) {
             case 'resident':
                 if (residentFields) residentFields.style.display = 'block';
                 break;
             case 'vendor':
                 if (vendorFields) vendorFields.style.display = 'block';
+                initProcessingMap();
                 break;
             case 'collector':
                 if (collectorFields) collectorFields.style.display = 'block';
                 break;
         }
     }
+
 
     // Form validation
     function validateForm() {
@@ -220,35 +222,87 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        if (userType === 'vendor') {
-            const companyName = document.getElementById('companyName')?.value.trim();
-            const processingType = document.getElementById('processingType')?.value;
-            const capacity = document.getElementById('capacity')?.value;
+        if (userType === 'resident') {
+            const addressLine = document.getElementById('addressLine')?.value.trim();
+            const pincode = document.getElementById('pincode')?.value.trim();
+            const latitude = document.getElementById('latitude')?.value;
+            const longitude = document.getElementById('longitude')?.value;
 
-            if (!companyName) {
-                showFieldError(document.getElementById('companyName'), 'Company name is required');
+            if (!addressLine) {
+                showFieldError(document.getElementById('addressLine'), 'Address is required');
                 isValid = false;
             }
-            if (!processingType) {
-                showFieldError(document.getElementById('processingType'), 'Processing type is required');
+            if (!pincode) {
+                showFieldError(document.getElementById('pincode'), 'Pincode is required');
                 isValid = false;
             }
-            if (!capacity || capacity <= 0) {
-                showFieldError(document.getElementById('capacity'), 'Valid capacity is required');
+            if (!latitude || !longitude) {
+                showMessage('Please select your location on the map', 'error');
                 isValid = false;
             }
         }
 
         if (userType === 'collector') {
-            const vehicleNumber = document.getElementById('vehicleNumber')?.value.trim();
+            const employeeId = document.getElementById('employeeId')?.value.trim();
+            const assignedZone = document.getElementById('assignedZone')?.value;
+            const vehicleNo = document.getElementById('vehicleNo')?.value.trim();
             const vehicleType = document.getElementById('vehicleType')?.value;
+            const collectorLat = document.getElementById('collectorLatitude')?.value;
+            const collectorLng = document.getElementById('collectorLongitude')?.value;
 
-            if (!vehicleNumber) {
-                showFieldError(document.getElementById('vehicleNumber'), 'Vehicle number is required');
+            if (!employeeId) {
+                showFieldError(document.getElementById('employeeId'), 'Employee ID is required');
+                isValid = false;
+            }
+            if (!assignedZone) {
+                showFieldError(document.getElementById('assignedZone'), 'Assigned zone is required');
+                isValid = false;
+            }
+            if (!vehicleNo) {
+                showFieldError(document.getElementById('vehicleNo'), 'Vehicle number is required');
                 isValid = false;
             }
             if (!vehicleType) {
                 showFieldError(document.getElementById('vehicleType'), 'Vehicle type is required');
+                isValid = false;
+            }
+            if (!collectorLat || !collectorLng) {
+                showMessage('Please select your current location on the map', 'error');
+                isValid = false;
+            }
+        }
+
+        if (userType === 'vendor') {
+            const companyName = document.getElementById('companyName')?.value.trim();
+            const licenseNo = document.getElementById('licenseNo')?.value.trim();
+            const vendorAddress = document.getElementById('vendorAddress')?.value.trim();
+            const processingMethod = document.getElementById('processingMethod')?.value;
+            const requiredWasteTypes = document.getElementById('requiredWasteTypes')?.selectedOptions;
+            const facilityLat = document.getElementById('facilityLatitude')?.value;
+            const facilityLng = document.getElementById('facilityLongitude')?.value;
+
+            if (!companyName) {
+                showFieldError(document.getElementById('companyName'), 'Company name is required');
+                isValid = false;
+            }
+            if (!licenseNo) {
+                showFieldError(document.getElementById('licenseNo'), 'License number is required');
+                isValid = false;
+            }
+            if (!vendorAddress) {
+                showFieldError(document.getElementById('vendorAddress'), 'Company address is required');
+                isValid = false;
+            }
+            if (!processingMethod) {
+                showFieldError(document.getElementById('processingMethod'), 'Processing method is required');
+                isValid = false;
+            }
+            if (!requiredWasteTypes || requiredWasteTypes.length === 0) {
+                showFieldError(document.getElementById('requiredWasteTypes'), 'Please select at least one waste type');
+                isValid = false;
+            }
+            if (!facilityLat || !facilityLng) {
+                showMessage('Please select your facility location on the map', 'error');
                 isValid = false;
             }
         }
@@ -260,7 +314,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function showFieldError(input, message) {
         const formGroup = input.closest('.form-group');
         formGroup.classList.add('error');
-        
+
         const errorMessage = document.createElement('div');
         errorMessage.className = 'error-message';
         errorMessage.textContent = message;
@@ -305,44 +359,272 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Prepare signup data based on user type
-    function prepareSignupData(userType) {
-        const baseData = {
-            firstName: firstNameInput.value.trim(),
-            lastName: lastNameInput.value.trim(),
-            email: emailInput.value.trim(),
-            phone: phoneInput.value.trim(),
-            password: passwordInput.value,
-            newsletter: newsletterCheckbox.checked
-        };
+   // Update the prepareSignupData function
+function prepareSignupData(userType) {
+    const baseData = {
+        fullName: `${firstNameInput.value.trim()} ${lastNameInput.value.trim()}`,
+        email: emailInput.value.trim(),
+        password: passwordInput.value,
+    };
 
-        switch (userType) {
-            case 'resident':
-                return {
-                    ...baseData,
-                    address: document.getElementById('address')?.value.trim(),
-                    city: document.getElementById('city')?.value.trim(),
-                    pincode: document.getElementById('pincode')?.value.trim()
-                };
-            case 'vendor':
-                return {
-                    ...baseData,
-                    companyName: document.getElementById('companyName')?.value.trim(),
-                    processingType: document.getElementById('processingType')?.value,
-                    capacity: parseInt(document.getElementById('capacity')?.value) || 0
-                };
-            case 'collector':
-                return {
-                    ...baseData,
-                    vehicleNumber: document.getElementById('vehicleNumber')?.value.trim(),
-                    vehicleType: document.getElementById('vehicleType')?.value
-                };
-            default:
-                return baseData;
-        }
+    switch (userType) {
+        case 'resident':
+            return {
+                ...baseData,
+                phoneNo: phoneInput.value.trim(),
+                addressLine: document.getElementById('addressLine').value.trim(),
+                pincode: document.getElementById('pincode').value.trim(),
+                coordinates: [
+                    parseFloat(document.getElementById('longitude').value),
+                    parseFloat(document.getElementById('latitude').value)
+                ]
+            };
+        case 'collector':
+            return {
+                ...baseData,
+                employeeId: document.getElementById('employeeId').value.trim(),
+                assignedZone: document.getElementById('assignedZone').value,
+                vehicleNo: document.getElementById('vehicleNo').value.trim(),
+                vehicleType: document.getElementById('vehicleType').value,
+                currentLocation: {
+                    coordinates: [
+                        parseFloat(document.getElementById('collectorLongitude').value),
+                        parseFloat(document.getElementById('collectorLatitude').value)
+                    ]
+                }
+            };
+        case 'vendor':
+            return {
+                ...baseData,
+                companyName: document.getElementById('companyName').value.trim(),
+                licenseNo: document.getElementById('licenseNo').value.trim(),
+                address: document.getElementById('vendorAddress').value.trim(),
+                processingMethod: document.getElementById('processingMethod').value,
+                requiredWasteTypes: Array.from(document.getElementById('requiredWasteTypes').selectedOptions)
+                    .map(option => option.value),
+                processingFacilityLocation: {
+                    type: "Point",
+                    coordinates: [
+                        parseFloat(document.getElementById('facilityLongitude').value),
+                        parseFloat(document.getElementById('facilityLatitude').value)
+                    ]
+                }
+            };
+        default:
+            return baseData;
     }
+}
+
+// Update the map initialization functions
+let residentMap, residentMarker;
+let collectorMap, collectorMarker;
+let vendorMap, vendorMarker;
+
+function initResidentMap() {
+    if (residentMap) return;
+    
+    residentMap = L.map('residentMap').setView([20.5937, 78.9629], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(residentMap);
+    
+    // Add locate control
+    const locateControl = L.control.locate({
+        position: 'topright',
+        drawCircle: true,
+        showPopup: false,
+        icon: 'fas fa-location-arrow',
+        metric: true,
+        strings: {
+            title: "Show my location"
+        }
+    }).addTo(residentMap);
+
+    // Add button to get current location
+    const locateButton = L.easyButton({
+        position: 'topright',
+        states: [{
+            stateName: 'locate',
+            icon: '<i class="fas fa-location-arrow"></i>',
+            title: 'Get my current location',
+            onClick: function(btn, map) {
+                map.locate({setView: true, maxZoom: 16});
+            }
+        }]
+    }).addTo(residentMap);
+
+    residentMap.on('locationfound', function(e) {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+        
+        if (residentMarker) {
+            residentMarker.setLatLng(e.latlng);
+        } else {
+            residentMarker = L.marker(e.latlng).addTo(residentMap);
+        }
+        
+        document.getElementById('latitude').value = lat;
+        document.getElementById('longitude').value = lng;
+    });
+
+    residentMap.on('click', function(e) {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+        
+        if (residentMarker) {
+            residentMarker.setLatLng(e.latlng);
+        } else {
+            residentMarker = L.marker(e.latlng).addTo(residentMap);
+        }
+        
+        document.getElementById('latitude').value = lat;
+        document.getElementById('longitude').value = lng;
+    });
+}
+
+// Do the same for initCollectorMap and initVendorMap
+function initCollectorMap() {
+    if (collectorMap) return;
+    
+    collectorMap = L.map('collectorMap').setView([20.5937, 78.9629], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(collectorMap);
+    
+    // Add locate control
+    const locateControl = L.control.locate({
+        position: 'topright',
+        drawCircle: true,
+        showPopup: false,
+        icon: 'fas fa-location-arrow',
+        metric: true,
+        strings: {
+            title: "Show my location"
+        }
+    }).addTo(collectorMap);
+
+    // Add button to get current location
+    const locateButton = L.easyButton({
+        position: 'topright',
+        states: [{
+            stateName: 'locate',
+            icon: '<i class="fas fa-location-arrow"></i>',
+            title: 'Get my current location',
+            onClick: function(btn, map) {
+                map.locate({setView: true, maxZoom: 16});
+            }
+        }]
+    }).addTo(collectorMap);
+
+    collectorMap.on('locationfound', function(e) {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+        
+        if (collectorMarker) {
+            collectorMarker.setLatLng(e.latlng);
+        } else {
+            collectorMarker = L.marker(e.latlng).addTo(collectorMap);
+        }
+        
+        document.getElementById('collectorLatitude').value = lat;
+        document.getElementById('collectorLongitude').value = lng;
+    });
+
+    collectorMap.on('click', function(e) {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+        
+        if (collectorMarker) {
+            collectorMarker.setLatLng(e.latlng);
+        } else {
+            collectorMarker = L.marker(e.latlng).addTo(collectorMap);
+        }
+        
+        document.getElementById('collectorLatitude').value = lat;
+        document.getElementById('collectorLongitude').value = lng;
+    });
+}
+
+function initVendorMap() {
+    if (vendorMap) return;
+    
+    vendorMap = L.map('vendorMap').setView([20.5937, 78.9629], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(vendorMap);
+    
+    // Add locate control
+    const locateControl = L.control.locate({
+        position: 'topright',
+        drawCircle: true,
+        showPopup: false,
+        icon: 'fas fa-location-arrow',
+        metric: true,
+        strings: {
+            title: "Show my location"
+        }
+    }).addTo(vendorMap);
+
+    // Add button to get current location
+    const locateButton = L.easyButton({
+        position: 'topright',
+        states: [{
+            stateName: 'locate',
+            icon: '<i class="fas fa-location-arrow"></i>',
+            title: 'Get my current location',
+            onClick: function(btn, map) {
+                map.locate({setView: true, maxZoom: 16});
+            }
+        }]
+    }).addTo(vendorMap);
+
+    vendorMap.on('locationfound', function(e) {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+        
+        if (vendorMarker) {
+            vendorMarker.setLatLng(e.latlng);
+        } else {
+            vendorMarker = L.marker(e.latlng).addTo(vendorMap);
+        }
+        
+        document.getElementById('facilityLatitude').value = lat;
+        document.getElementById('facilityLongitude').value = lng;
+    });
+
+    vendorMap.on('click', function(e) {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+        
+        if (vendorMarker) {
+            vendorMarker.setLatLng(e.latlng);
+        } else {
+            vendorMarker = L.marker(e.latlng).addTo(vendorMap);
+        }
+        
+        document.getElementById('facilityLatitude').value = lat;
+        document.getElementById('facilityLongitude').value = lng;
+    });
+}
+
+// Update the toggleRoleFields function
+function toggleRoleFields(userType) {
+    [residentFields, collectorFields, vendorFields].forEach(field => {
+        if (field) field.style.display = 'none';
+    });
+
+    switch (userType) {
+        case 'resident':
+            if (residentFields) residentFields.style.display = 'block';
+            setTimeout(initResidentMap, 100); // Small delay to ensure DOM is ready
+            break;
+        case 'collector':
+            if (collectorFields) collectorFields.style.display = 'block';
+            setTimeout(initCollectorMap, 100);
+            break;
+        case 'vendor':
+            if (vendorFields) vendorFields.style.display = 'block';
+            setTimeout(initVendorMap, 100);
+            break;
+    }
+}
 
     // Handle form submission
-    signupForm.addEventListener('submit', async function(e) {
+    signupForm.addEventListener('submit', async function (e) {
         e.preventDefault();
 
         if (!validateForm()) {
@@ -368,11 +650,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (response.ok && result.success) {
                 showMessage('Account created successfully! Please check your email for verification.', 'success');
-                
+
                 // Clear form
                 signupForm.reset();
                 toggleRoleFields('');
-                
+
                 // Redirect to login page after 3 seconds
                 setTimeout(() => {
                     window.location.href = '/public/HTML/login.html';
@@ -392,11 +674,11 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Event listeners
-    userTypeSelect.addEventListener('change', function() {
+    userTypeSelect.addEventListener('change', function () {
         toggleRoleFields(this.value);
     });
 
-    passwordInput.addEventListener('input', function() {
+    passwordInput.addEventListener('input', function () {
         if (this.value) {
             checkPasswordStrength(this.value);
         } else {
@@ -405,7 +687,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    confirmPasswordInput.addEventListener('input', function() {
+    confirmPasswordInput.addEventListener('input', function () {
         const password = passwordInput.value;
         if (this.value && this.value !== password) {
             showFieldError(this, 'Passwords do not match');
@@ -421,11 +703,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Real-time validation for all inputs
     const inputs = signupForm.querySelectorAll('input, select');
     inputs.forEach(input => {
-        input.addEventListener('blur', function() {
+        input.addEventListener('blur', function () {
             validateField(this);
         });
 
-        input.addEventListener('input', function() {
+        input.addEventListener('input', function () {
             // Clear error on input
             this.closest('.form-group').classList.remove('error');
             const errorMessage = this.closest('.form-group').querySelector('.error-message');
@@ -434,6 +716,63 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+function setupWasteTypeMultiSelect() {
+    const selectElement = document.getElementById('requiredWasteTypes');
+    const tagsContainer = document.getElementById('selectedWasteTags');
+
+    function updateSelectedTags() {
+        tagsContainer.innerHTML = '';
+        const selectedOptions = Array.from(selectElement.selectedOptions);
+        
+        if (selectedOptions.length === 0) {
+            const emptyTag = document.createElement('div');
+            emptyTag.className = 'tag';
+            emptyTag.textContent = 'No waste types selected';
+            emptyTag.style.opacity = '0.7';
+            emptyTag.style.backgroundColor = 'var(--border)';
+            emptyTag.style.color = 'var(--text-light)';
+            tagsContainer.appendChild(emptyTag);
+            return;
+        }
+
+        selectedOptions.forEach(option => {
+            const tag = document.createElement('div');
+            tag.className = 'tag';
+            tag.innerHTML = `
+                ${option.text}
+                <button type="button" data-value="${option.value}">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            tagsContainer.appendChild(tag);
+        });
+    }
+
+    // Update tags when selection changes
+    selectElement.addEventListener('change', updateSelectedTags);
+
+    // Remove tag when X is clicked
+    tagsContainer.addEventListener('click', (e) => {
+        if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+            const button = e.target.tagName === 'BUTTON' ? e.target : e.target.closest('button');
+            const valueToRemove = button.getAttribute('data-value');
+            
+            // Find and unselect the corresponding option
+            Array.from(selectElement.options).forEach(option => {
+                if (option.value === valueToRemove) {
+                    option.selected = false;
+                }
+            });
+            
+            // Trigger change event to update the display
+            selectElement.dispatchEvent(new Event('change'));
+        }
+    });
+
+    // Initialize the display
+    updateSelectedTags();
+}
+
 
     // Field-specific validation
     function validateField(input) {
@@ -466,7 +805,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Keyboard shortcuts
-    document.addEventListener('keydown', function(e) {
+    document.addEventListener('keydown', function (e) {
         // Ctrl/Cmd + Enter to submit form
         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
             e.preventDefault();
@@ -478,7 +817,7 @@ document.addEventListener('DOMContentLoaded', function() {
     userTypeSelect.focus();
 
     // Accessibility improvements
-    signupForm.addEventListener('keydown', function(e) {
+    signupForm.addEventListener('keydown', function (e) {
         if (e.key === 'Tab') {
             // Handle tab navigation
             const focusableElements = signupForm.querySelectorAll('input, select, button, a');
@@ -500,14 +839,14 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Add loading animation to button
-    signupButton.addEventListener('click', function() {
+    signupButton.addEventListener('click', function () {
         if (this.disabled) return;
-        
+
         // Add ripple effect
         const ripple = document.createElement('span');
         ripple.className = 'ripple';
         this.appendChild(ripple);
-        
+
         setTimeout(() => {
             ripple.remove();
         }, 600);
@@ -516,6 +855,32 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize form
     toggleRoleFields('');
 });
+let processingMap;
+let processingMarker;
+
+function initProcessingMap() {
+    if (processingMap) return; // already initialized
+
+    processingMap = L.map('processingMap').setView([20.5937, 78.9629], 5); // Centered on India
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: 'Map data © OpenStreetMap contributors'
+    }).addTo(processingMap);
+
+    processingMap.on('click', function (e) {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+
+        if (processingMarker) {
+            processingMarker.setLatLng(e.latlng);
+        } else {
+            processingMarker = L.marker(e.latlng).addTo(processingMap);
+        }
+
+        document.getElementById('latitude').value = lat;
+        document.getElementById('longitude').value = lng;
+    });
+}
+
 
 // Add CSS for ripple effect
 const style = document.createElement('style');

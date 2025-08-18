@@ -23,6 +23,7 @@
                 <li><a href="#how-it-works">How It Works</a></li>
                 <li><a href="#impact">Impact</a></li>
                 <li><a href="/public/HTML/contact.html">Contact</a></li>
+                <li><a href="https://github.com/pawan-kumar-rajak/CodeCrux" target="_blank">Docs</a></li>
             </ul>
             <div class="nav-actions">
                 <a href="/public/HTML/login.html" class="login-btn">Login</a>
@@ -278,48 +279,52 @@
     </section>
 
     <!-- Impact Section -->
-    <section id="impact" class="impact-section">
-        <div class="container">
-            <div class="section-header">
-                <h2>Environmental Impact</h2>
-                <p>Real results for a sustainable future</p>
+   <!-- Impact Section -->
+<section id="impact" class="impact-section">
+    <div class="container">
+        <div class="section-header">
+            <h2>Environmental Impact</h2>
+            <p>Real results for a sustainable future</p>
+        </div>
+        <div class="impact-grid">
+            <div class="impact-card">
+                <div class="impact-icon">
+                    <i class="fas fa-leaf"></i>
+                </div>
+                <h3>Carbon Reduction</h3>
+                <div class="impact-number" id="co2-reduced">0 kg</div>
+                <p>CO₂ emissions reduced through waste-to-energy conversion</p>
             </div>
-            <div class="impact-grid">
-                <div class="impact-card">
-                    <div class="impact-icon">
-                        <i class="fas fa-leaf"></i>
-                    </div>
-                    <h3>Carbon Reduction</h3>
-                    <div class="impact-number">1,200 kg</div>
-                    <p>CO₂ emissions reduced through waste-to-energy conversion</p>
+            <div class="impact-card">
+                <div class="impact-icon">
+                    <i class="fas fa-solar-panel"></i>
                 </div>
-                <div class="impact-card">
-                    <div class="impact-icon">
-                        <i class="fas fa-solar-panel"></i>
-                    </div>
-                    <h3>Energy Generated</h3>
-                    <div class="impact-number">2,500 kWh</div>
-                    <p>Clean energy produced from waste processing</p>
+                <h3>Energy Generated</h3>
+                <div class="impact-number" id="energy-generated">0 kWh</div>
+                <p>Clean energy produced from waste processing</p>
+            </div>
+            <div class="impact-card">
+                <div class="impact-icon">
+                    <i class="fas fa-recycle"></i>
                 </div>
-                <div class="impact-card">
-                    <div class="impact-icon">
-                        <i class="fas fa-recycle"></i>
-                    </div>
-                    <h3>Waste Diverted</h3>
-                    <div class="impact-number">5,000 kg</div>
-                    <p>Waste diverted from landfills through proper processing</p>
+                <h3>Waste Processed</h3>
+                <div class="impact-number" id="waste-processed">0 kg</div>
+                <p>Waste diverted from landfills through proper processing</p>
+            </div>
+            <div class="impact-card">
+                <div class="impact-icon">
+                    <i class="fas fa-users"></i>
                 </div>
-                <div class="impact-card">
-                    <div class="impact-icon">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <h3>Community Engagement</h3>
-                    <div class="impact-number">1,000+</div>
-                    <p>Active residents participating in the program</p>
-                </div>
+                <h3>Reports Processed</h3>
+                <div class="impact-number" id="reports-processed">0</div>
+                <p>Waste reports successfully processed by our system</p>
             </div>
         </div>
-    </section>
+        <div class="impact-chart-container">
+            <canvas id="impactTrendChart"></canvas>
+        </div>
+    </div>
+</section>
 
     <!-- Technology Stack Section -->
     <section class="tech-section">
@@ -437,7 +442,7 @@
             </div>
         </div>
     </footer>
-
-    <script src="/JS/index.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/public/JS/index.js"></script>
 </body>
 </html>

@@ -697,3 +697,156 @@ body {
         border-width: 3px;
     }
 }
+
+
+/* Multiselect Styles */
+/* .multiselect-container {
+    position: relative;
+}
+
+.multiselect-container select[multiple] {
+    height: auto;
+    min-height: 100px;
+    padding: 0.5rem;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    width: 100%;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.3s ease;
+    background: var(--bg-white);
+}
+
+.multiselect-container select[multiple]:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
+}
+
+.multiselect-container select[multiple] option {
+    padding: 0.5rem;
+    margin: 0.25rem 0;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.multiselect-container select[multiple] option:hover {
+    background-color: var(--primary-light);
+    color: white;
+}
+
+.multiselect-container select[multiple] option:checked {
+    background-color: var(--primary);
+    color: white;
+}
+
+.selected-items {
+    margin-top: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.selected-item {
+    background-color: var(--primary-light);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.selected-item button {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 0.8rem;
+    padding: 0;
+} */
+
+
+/* Multiselect Styles */
+.multiselect-wrapper {
+    position: relative;
+}
+
+.multiselect-wrapper select[multiple] {
+    height: auto;
+    min-height: 100px;
+    padding: 0.75rem;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    width: 100%;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.3s ease;
+    background: var(--bg-white);
+    margin-bottom: 0.5rem;
+}
+
+.multiselect-wrapper select[multiple]:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
+}
+
+.selected-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.tag {
+    background-color: var(--primary-light);
+    color: white;
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.tag button {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 0;
+    display: flex;
+    align-items: center;
+}
+
+.tag button:hover {
+    color: var(--secondary);
+}
+/* Map Controls */
+.leaflet-control-locate a {
+    background-color: var(--bg-white);
+    color: var(--primary);
+    border-radius: 4px;
+    padding: 5px;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+}
+
+.leaflet-control-locate.active a {
+    background-color: var(--primary);
+    color: white;
+}
+
+.leaflet-control-easy-button {
+    background-color: var(--bg-white);
+    color: var(--primary);
+    border-radius: 4px;
+    padding: 5px;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+    cursor: pointer;
+}
+
+.leaflet-control-easy-button:hover {
+    background-color: var(--primary-light);
+    color: white;
+}

@@ -1,189 +1,151 @@
-
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vendor Dashboard - Energy Production</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <link rel="stylesheet" href="/public/CSS/vendor.dashboard.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Dashboard | CleanCity Energy</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <link rel="stylesheet" href="/public/CSS/vendor.dashboard.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
-  <div class="vendor-dashboard">
-    <header class="dashboard-header">
-      <h1><i class="fas fa-industry"></i> Energy Production Dashboard 
-        <button onclick="logoutUser()" id="logoutuser">Logout</button>
-      </h1>
-      <div class="header-actions">
-        <div class="filter-controls">
-          <select id="wasteTypeFilter">
-            <option value="all">All Types</option>
-            <option value="plastic waste">Plastic</option>
-            <option value="paper waste">Paper</option>
-            <option value="metal waste">Metal</option>
-            <option value="glass waste">Glass</option>
-            <option value="organic waste">Organic</option>
-            <option value="E-waste">E-waste</option>
-          </select>
-          <button id="refreshBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
-        </div>
-      </div>
-    </header>
-
-    <!-- Enhanced Stats Bar -->
-    <div class="stats-bar">
-      <div class="stat-card">
-        <div class="stat-value" id="totalReports">0</div>
-        <div class="stat-label">Available Waste</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" id="energyProduced">0</div>
-        <div class="stat-label">Energy Produced (kWh)</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" id="co2Reduced">0</div>
-        <div class="stat-label">CO₂ Reduced (kg)</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" id="processingEfficiency">0%</div>
-        <div class="stat-label">Processing Efficiency</div>
-      </div>
-    </div>
-
-    <!-- Energy Production Charts -->
-    <div class="charts-section">
-      <div class="chart-container">
-        <h3><i class="fas fa-chart-line"></i> Energy Production Trend</h3>
-        <canvas id="energyChart"></canvas>
-      </div>
-      <div class="chart-container">
-        <h3><i class="fas fa-chart-pie"></i> Waste Type Distribution</h3>
-        <canvas id="wasteTypeChart"></canvas>
-      </div>
-    </div>
-
-    <!-- Processing Timeline -->
-    <div class="timeline-section">
-      <h3><i class="fas fa-clock"></i> Processing Timeline</h3>
-      <div class="timeline" id="processingTimeline">
-        <!-- Timeline items will be populated here -->
-      </div>
-    </div>
-
-    <!-- Available Waste Reports -->
-    <main class="waste-reports-container">
-      <div class="section-header">
-        <h2><i class="fas fa-trash-alt"></i> Available Waste Reports</h2>
-        <div class="view-controls">
-          <button id="gridView" class="view-btn active"><i class="fas fa-th"></i></button>
-          <button id="listView" class="view-btn"><i class="fas fa-list"></i></button>
-        </div>
-      </div>
-      
-      <div class="waste-reports-grid" id="reportsGrid">
-        <!-- Reports will be loaded here -->
-      </div>
-    </main>
-
-    <!-- Action Bar -->
-    <div class="action-bar">
-      <button id="selectAllBtn"><i class="fas fa-check-square"></i> Select All</button>
-      <button id="collectSelectedBtn" disabled><i class="fas fa-truck"></i> Collect Selected</button>
-      <div class="selected-info">
-        <span id="selectedCount">0</span> items selected
-      </div>
-    </div>
-  </div>
-
-  <!-- Waste Details Modal -->
-  <div id="wasteDetailsModal" class="modal">
-    <div class="modal-content">
-      <span class="close">&times;</span>
-      <div class="waste-details-content">
-        <div class="waste-images">
-          <img id="modalWasteImage" src="" alt="Waste">
-        </div>
-        <div class="waste-info">
-          <h3 id="modalWasteType"></h3>
-          <div class="info-grid">
-            <div class="info-item">
-              <label>Weight:</label>
-              <span id="modalWeight"></span>
+    <div class="dashboard-wrapper">
+        <header class="dashboard-header">
+            <div class="header-title">
+                <h1><i class="fa-solid fa-solar-panel"></i> Energy Production Dashboard</h1>
+                <span id="vendorName" class="vendor-name">Loading...</span>
             </div>
-            <div class="info-item">
-              <label>Energy Potential:</label>
-              <span id="modalEnergy"></span>
+            <div class="header-actions">
+                <button id="refreshBtn" class="header-btn" title="Refresh Data"><i
+                        class="fa-solid fa-sync-alt"></i></button>
+                <button id="logoutBtn" class="header-btn logout" title="Logout"><i
+                        class="fa-solid fa-right-from-bracket"></i></button>
             </div>
-            <div class="info-item">
-              <label>CO₂ Reduction:</label>
-              <span id="modalCo2"></span>
-            </div>
-            <div class="info-item">
-              <label>Processing Method:</label>
-              <span id="modalMethod"></span>
-            </div>
-          </div>
-          <div class="reporter-info">
-            <h4>Reporter Details</h4>
-            <p><strong>Name:</strong> <span id="modalReporterName"></span></p>
-            <p><strong>Phone:</strong> <span id="modalReporterPhone"></span></p>
-            <p><strong>Location:</strong> <span id="modalLocation"></span></p>
-          </div>
-          <div class="action-buttons">
-            <button class="btn btn-primary" id="requestCollection">
-              <i class="fas fa-handshake"></i> Request Collection
-            </button>
-            <button class="btn btn-secondary" id="viewOnMap">
-              <i class="fas fa-map-marker-alt"></i> View on Map
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+        </header>
 
-  <!-- Processing Status Modal -->
-  <div id="processingModal" class="modal">
-    <div class="modal-content">
-      <span class="close">&times;</span>
-      <h3><i class="fas fa-cogs"></i> Processing Status</h3>
-      <div class="processing-status">
-        <div class="status-step active">
-          <i class="fas fa-truck"></i>
-          <span>Collection</span>
-        </div>
-        <div class="status-step">
-          <i class="fas fa-industry"></i>
-          <span>Processing</span>
-        </div>
-        <div class="status-step">
-          <i class="fas fa-bolt"></i>
-          <span>Energy Generation</span>
-        </div>
-        <div class="status-step">
-          <i class="fas fa-check-circle"></i>
-          <span>Complete</span>
-        </div>
-      </div>
-      <div class="processing-metrics">
-        <div class="metric">
-          <span class="metric-value" id="currentEfficiency">0%</span>
-          <span class="metric-label">Efficiency</span>
-        </div>
-        <div class="metric">
-          <span class="metric-value" id="currentEnergy">0 kWh</span>
-          <span class="metric-label">Energy Generated</span>
-        </div>
-        <div class="metric">
-          <span class="metric-value" id="currentCo2">0 kg</span>
-          <span class="metric-label">CO₂ Reduced</span>
-        </div>
-      </div>
-    </div>
-  </div>
+        <main class="dashboard-content">
+            <!-- Stats -->
+            <section class="stats-container">
+                <div class="stat-card">
+                    <i class="fa-solid fa-leaf"></i>
+                    <div class="stat-info">
+                        <div class="stat-value" id="totalCo2Reduced">0 kg</div>
+                        <div class="stat-label">CO₂ Reduced</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fa-solid fa-bolt"></i>
+                    <div class="stat-info">
+                        <div class="stat-value" id="totalEnergyProduced">0 kWh</div>
+                        <div class="stat-label">Energy Produced</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fa-solid fa-recycle"></i>
+                    <div class="stat-info">
+                        <div class="stat-value" id="totalWasteProcessed">0 kg</div>
+                        <div class="stat-label">Waste Processed</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fa-solid fa-cubes-stacked"></i>
+                    <div class="stat-info">
+                        <div class="stat-value" id="totalAvailableBins">0</div>
+                        <div class="stat-label">Bins Available</div>
+                    </div>
+                </div>
+            </section>
 
-  <script src="/public/JS/vendor.dashboard.js"></script>
+            <!-- Main Grid -->
+            <div class="content-grid">
+                <section class="bins-section">
+                    <div class="section-header">
+                        <h2><i class="fa-solid fa-magnifying-glass"></i> Available Bins for Collection</h2>
+                        <select id="wasteTypeFilter">
+                            <option value="all">All Waste Types</option>
+                        </select>
+                    </div>
+                    <div class="action-bar">
+                        <button id="selectAllBtn">Select All</button>
+                        <button id="requestSelectedBtn" disabled><i class="fa-solid fa-truck-fast"></i> Request Selected
+                            (<span id="selectedCount">0</span>)</button>
+                    </div>
+                    <div class="bins-grid" id="binsGrid">
+                        <!-- Bins will be loaded here -->
+                    </div>
+                </section>
+
+                <div class="right-column">
+                    <section class="awaiting-processing-section">
+                        <h2><i class="fa-solid fa-clock"></i> Awaiting Processing</h2>
+                        <div class="processing-list" id="awaitingProcessingList"></div>
+                    </section>
+
+                    <section class="requested-deliveries-section">
+                        <h2><i class="fa-solid fa-truck-arrow-right"></i> Requested Deliveries</h2>
+                        <div class="delivery-list" id="requestedDeliveriesList"></div>
+                    </section>
+
+                    <section class="processed-deliveries-section">
+                        <h2><i class="fa-solid fa-check-circle"></i> Processed Deliveries</h2>
+                        <div class="delivery-list" id="processedDeliveriesList"></div>
+                    </section>
+
+                    <section class="chart-section">
+                        <h2><i class="fa-solid fa-chart-pie"></i> Waste Processed by Type</h2>
+                        <div class="chart-container">
+                            <canvas id="wasteTypeChart"></canvas>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Bin Details Modal -->
+    <div class="overlay" id="detailsOverlay">
+        <div class="modal">
+            <button class="close-modal" id="closeDetailsModal">&times;</button>
+            <div id="detailsModalContent">
+                <!-- Content injected by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Mark Processed Modal -->
+    <div class="overlay" id="processOverlay">
+        <div class="modal process-modal">
+            <button class="close-modal" id="closeProcessModal">&times;</button>
+            <h2>Finalize Processing</h2>
+            <form id="processForm">
+                <p>Enter the final metrics for Request ID: <strong id="processRequestId"></strong></p>
+                <div class="form-group">
+                    <label for="energyGenerated">Energy Generated (kWh)</label>
+                    <input type="number" id="energyGenerated" required step="0.1" placeholder="e.g., 150.5">
+                </div>
+                <div class="form-group">
+                    <label for="co2Reduced">CO₂ Reduced (kg)</label>
+                    <input type="number" id="co2Reduced" required step="0.1" placeholder="e.g., 25.2">
+                </div>
+                <div class="form-group">
+                    <label for="processingMethod">Processing Method</label>
+                    <input type="text" id="processingMethod" required placeholder="e.g., Pyrolysis, Recycling">
+                </div>
+                <button type="submit" class="modal-btn btn-confirm"><i class="fa-solid fa-check-double"></i> Confirm &
+                    Complete</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="snackbar"></div>
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+
+    <script src="/public/JS/vendor.dashboard.js"></script>
 </body>
+
 </html>

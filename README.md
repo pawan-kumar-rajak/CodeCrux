@@ -2,6 +2,7 @@
 
 **Revolutionizing urban waste management through AI-powered optimization and community engagement**  
 
+<img width="100%" src='public\Images\banner.png'>
 
 ---
 
@@ -441,6 +442,7 @@ pip install flask ultralytics opencv-python torch
 ```sh
 # make sure that your virtual environment is activated
 # you'll see (venv) at left most of terminal inline
+# make sure to be under src/ML/
 python GARBAGENEW.PY
 ```
 
@@ -463,6 +465,8 @@ npm run dev
 ```
 
 - The server will run on `http://localhost:5000` (or as configured).
+- if got mongodb error ( its because you are running mongodb locally and transaction not supporting local storage)
+- [fix it](mongodb.md)
 
 ---
 
@@ -518,10 +522,10 @@ We welcome contributions! Here's how to get involved:
 
 ---
 ## 🤝 Contributors
-- Yashansh Raj Pandey(Project Lead)[https://github.com/yashanshhhraj]
-- Gajendra Singh Thakur (ML Engineer)[https://github.com/Gajendra-dev-ux]
-- Pawan Kumar Rajak (Fullstack Developer)[https://github.com/pawan-kumar-rajak]
-- Himanshu Dhepe (Management and requirement gathering)[https://github.com/himanshu1hd]
+- [Yashansh Raj Pandey (Project Lead)](https://github.com/yashanshhhraj)
+- [Gajendra Singh Thakur (ML Engineer)](https://github.com/Gajendra-dev-ux)
+- [Pawan Kumar Rajak (Fullstack Developer)](https://github.com/pawan-kumar-rajak)
+- [Himanshu Dhepe (Management and requirement gathering)](https://github.com/himanshu1hd)
 
 ---
 

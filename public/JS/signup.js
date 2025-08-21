@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const vendorFields = document.getElementById('vendorFields');
     const collectorFields = document.getElementById('collectorFields');
 
+
     setupWasteTypeMultiSelect();
 
     // Password toggle functionality
@@ -373,6 +374,7 @@ function prepareSignupData(userType) {
         case 'collector':
             return {
                 ...baseData,
+                phoneNo: phoneInput.value.trim(),
                 employeeId: document.getElementById('employeeId').value.trim(),
                 assignedZone: document.getElementById('assignedZone').value,
                 vehicleNo: document.getElementById('vehicleNo').value.trim(),

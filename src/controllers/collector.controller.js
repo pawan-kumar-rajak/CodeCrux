@@ -40,8 +40,9 @@ const registerCollector = asyncHandler(async (req, res, next) => {
         // Extract fields from the request body
         const { employeeId, fullName, email, password, assignedZone, currentLocation, vehicleNo, vehicleType, phoneNo } = req.body;
 
+
         // Validate required fields
-        if (!employeeId || !fullName || !email || !password || !assignedZone || !currentLocation || phoneNo) {
+        if (!employeeId || !fullName || !email || !password || !assignedZone || !currentLocation || !phoneNo) {
             return next(new ApiError(400, "All required fields must be provided"));
         }
 

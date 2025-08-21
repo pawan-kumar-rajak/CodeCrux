@@ -341,7 +341,7 @@ Ensures data consistency during deletions and updates
 | **Carbon Credit Marketplace** | Concept | Monetize CO2 reductions |
 | **Community Leaderboards** | Planned | Boost resident engagement |
 
-![Future Vision](https://via.placeholder.com/800x400?text=IoT+Smart+Bins+and+Advanced+Analytics)  
+
 
 ---
 

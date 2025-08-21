@@ -110,15 +110,14 @@
                         <label for="addressLine">Address</label>
                         <div class="input-group">
                             <i class="fas fa-map-marker-alt"></i>
-                            <input type="text" id="addressLine" name="addressLine" placeholder="Enter your address"
-                                required>
+                            <input type="text" id="addressLine" name="addressLine" placeholder="Enter your address">
                         </div>
                     </div>
                     <div class="form-group">
                         <label for="pincode">Pincode</label>
                         <div class="input-group">
                             <i class="fas fa-map-pin"></i>
-                            <input type="number" id="pincode" name="pincode" placeholder="Enter pincode" required>
+                            <input type="number" id="pincode" name="pincode" placeholder="Enter pincode">
                         </div>
                     </div>
                     <div class="form-group">
@@ -135,13 +134,12 @@
                         <label for="employeeId">Employee ID</label>
                         <div class="input-group">
                             <i class="fas fa-id-card"></i>
-                            <input type="text" id="employeeId" name="employeeId" placeholder="Enter your employee ID"
-                                required>
+                            <input type="text" id="employeeId" name="employeeId" placeholder="Enter your employee ID">
                         </div>
                     </div>
                     <div class="form-group">
                         <label for="assignedZone">Assigned Zone</label>
-                        <select id="assignedZone" name="assignedZone" required>
+                        <select id="assignedZone" name="assignedZone">
                             <option value="">Select your zone</option>
                             <option value="North Zone">North Zone</option>
                             <option value="South Zone">South Zone</option>
@@ -153,13 +151,12 @@
                         <label for="vehicleNo">Vehicle Number</label>
                         <div class="input-group">
                             <i class="fas fa-truck"></i>
-                            <input type="text" id="vehicleNo" name="vehicleNo" placeholder="Enter vehicle number"
-                                required>
+                            <input type="text" id="vehicleNo" name="vehicleNo" placeholder="Enter vehicle number">
                         </div>
                     </div>
                     <div class="form-group">
                         <label for="vehicleType">Vehicle Type</label>
-                        <select id="vehicleType" name="vehicleType" required>
+                        <select id="vehicleType" name="vehicleType">
                             <option value="">Select vehicle type</option>
                             <option value="Truck">Truck</option>
                             <option value="Van">Van</option>
@@ -183,16 +180,14 @@
                         <label for="companyName">Company Name</label>
                         <div class="input-group">
                             <i class="fas fa-building"></i>
-                            <input type="text" id="companyName" name="companyName" placeholder="Enter company name"
-                                required>
+                            <input type="text" id="companyName" name="companyName" placeholder="Enter company name">
                         </div>
                     </div>
                     <div class="form-group">
                         <label for="licenseNo">License Number</label>
                         <div class="input-group">
                             <i class="fas fa-file-alt"></i>
-                            <input type="text" id="licenseNo" name="licenseNo" placeholder="Enter license number"
-                                required>
+                            <input type="text" id="licenseNo" name="licenseNo" placeholder="Enter license number">
                         </div>
                     </div>
                     <div class="form-group">
@@ -200,12 +195,12 @@
                         <div class="input-group">
                             <i class="fas fa-map-marker-alt"></i>
                             <input type="text" id="vendorAddress" name="vendorAddress"
-                                placeholder="Enter company address" required>
+                                placeholder="Enter company address">
                         </div>
                     </div>
                     <div class="form-group">
                         <label for="processingMethod">Processing Method</label>
-                        <select id="processingMethod" name="processingMethod" required>
+                        <select id="processingMethod" name="processingMethod">
                             <option value="">Select processing method</option>
                             <option value="torrefaction">Torrefaction</option>
                             <option value="biogas">Biogas Production</option>
@@ -217,7 +212,7 @@
                     <div class="form-group">
                         <label for="requiredWasteTypes">Accepted Waste Types (press CTRL + click )</label>
                         <div class="multiselect-wrapper">
-                            <select id="requiredWasteTypes" name="requiredWasteTypes" multiple required>
+                            <select id="requiredWasteTypes" name="requiredWasteTypes" multiple>
                                 <option value="E-waste">E-waste</option>
                                 <option value="automobile wastes">Automobile Wastes</option>
                                 <option value="battery waste">Battery Waste</option>
@@ -238,7 +233,13 @@
                         <input type="hidden" id="facilityLongitude" name="facilityLongitude">
                     </div>
                 </div>
-
+                <div>
+                   
+                        <input type="checkbox" id="termsAccepted" name="termsAccepted">
+                        <label for="termsAccepted">I accept the <a href="/terms" target="_blank">Terms and
+                                Conditions</a></label>
+            
+                </div>
                 <button type="submit" class="signup-button" id="signupButton">
                     <span class="button-text">Create Account</span>
                     <span class="button-loader" style="display: none;">

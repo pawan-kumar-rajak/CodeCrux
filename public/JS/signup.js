@@ -113,213 +113,204 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Form validation
     function validateForm() {
-        const userType = userTypeSelect.value;
-        const firstName = firstNameInput.value.trim();
-        const lastName = lastNameInput.value.trim();
-        const email = emailInput.value.trim();
-        const phone = phoneInput.value.trim();
-        const password = passwordInput.value;
-        const confirmPassword = confirmPasswordInput.value;
-        const termsAccepted = termsAcceptedCheckbox.checked;
+    const userType = userTypeSelect.value;
+    const firstName = firstNameInput.value.trim();
+    const lastName = lastNameInput.value.trim();
+    const email = emailInput.value.trim();
+    const phone = phoneInput.value.trim();
+    const password = passwordInput.value;
+    const confirmPassword = confirmPasswordInput.value;
+    const termsAccepted = termsAcceptedCheckbox.checked;
 
-        // Reset previous error states
-        document.querySelectorAll('.form-group').forEach(group => {
-            group.classList.remove('error');
-            const errorMessage = group.querySelector('.error-message');
-            if (errorMessage) {
-                errorMessage.remove();
-            }
-        });
-
-        let isValid = true;
-
-        // Validate user type
-        if (!userType) {
-            showFieldError(userTypeSelect, 'Please select your user type');
-            isValid = false;
+    // Reset previous error states
+    document.querySelectorAll('.form-group').forEach(group => {
+        group.classList.remove('error');
+        const errorMessage = group.querySelector('.error-message');
+        if (errorMessage) {
+            errorMessage.remove();
         }
+    });
 
-        // Validate first name
-        if (!firstName) {
-            showFieldError(firstNameInput, 'First name is required');
-            isValid = false;
-        } else if (firstName.length < 2) {
-            showFieldError(firstNameInput, 'First name must be at least 2 characters long');
-            isValid = false;
-        }
+    let isValid = true;
 
-        // Validate last name
-        if (!lastName) {
-            showFieldError(lastNameInput, 'Last name is required');
-            isValid = false;
-        } else if (lastName.length < 2) {
-            showFieldError(lastNameInput, 'Last name must be at least 2 characters long');
-            isValid = false;
-        }
-
-        // Validate email
-        if (!email) {
-            showFieldError(emailInput, 'Email is required');
-            isValid = false;
-        } else if (!isValidEmail(email)) {
-            showFieldError(emailInput, 'Please enter a valid email address');
-            isValid = false;
-        }
-
-        // Validate phone
-        if (!phone) {
-            showFieldError(phoneInput, 'Phone number is required');
-            isValid = false;
-        } else if (!isValidPhone(phone)) {
-            showFieldError(phoneInput, 'Please enter a valid phone number');
-            isValid = false;
-        }
-
-        // Validate password
-        if (!password) {
-            showFieldError(passwordInput, 'Password is required');
-            isValid = false;
-        } else if (password.length < 8) {
-            showFieldError(passwordInput, 'Password must be at least 8 characters long');
-            isValid = false;
-        } else if (checkPasswordStrength(password) < 3) {
-            showFieldError(passwordInput, 'Password is too weak');
-            isValid = false;
-        }
-
-        // Validate confirm password
-        if (!confirmPassword) {
-            showFieldError(confirmPasswordInput, 'Please confirm your password');
-            isValid = false;
-        } else if (password !== confirmPassword) {
-            showFieldError(confirmPasswordInput, 'Passwords do not match');
-            isValid = false;
-        }
-
-        // Validate terms acceptance
-        if (!termsAccepted) {
-            showFieldError(termsAcceptedCheckbox, 'You must accept the terms and conditions');
-            isValid = false;
-        }
-
-        // Role-specific validation
-        if (userType === 'resident') {
-            const address = document.getElementById('address')?.value.trim();
-            const city = document.getElementById('city')?.value.trim();
-            const pincode = document.getElementById('pincode')?.value.trim();
-
-            if (!address) {
-                showFieldError(document.getElementById('address'), 'Address is required');
-                isValid = false;
-            }
-            if (!city) {
-                showFieldError(document.getElementById('city'), 'City is required');
-                isValid = false;
-            }
-            if (!pincode) {
-                showFieldError(document.getElementById('pincode'), 'Pincode is required');
-                isValid = false;
-            }
-        }
-
-        if (userType === 'resident') {
-            const addressLine = document.getElementById('addressLine')?.value.trim();
-            const pincode = document.getElementById('pincode')?.value.trim();
-            const latitude = document.getElementById('latitude')?.value;
-            const longitude = document.getElementById('longitude')?.value;
-
-            if (!addressLine) {
-                showFieldError(document.getElementById('addressLine'), 'Address is required');
-                isValid = false;
-            }
-            if (!pincode) {
-                showFieldError(document.getElementById('pincode'), 'Pincode is required');
-                isValid = false;
-            }
-            if (!latitude || !longitude) {
-                showMessage('Please select your location on the map', 'error');
-                isValid = false;
-            }
-        }
-
-        if (userType === 'collector') {
-            const employeeId = document.getElementById('employeeId')?.value.trim();
-            const assignedZone = document.getElementById('assignedZone')?.value;
-            const vehicleNo = document.getElementById('vehicleNo')?.value.trim();
-            const vehicleType = document.getElementById('vehicleType')?.value;
-            const collectorLat = document.getElementById('collectorLatitude')?.value;
-            const collectorLng = document.getElementById('collectorLongitude')?.value;
-
-            if (!employeeId) {
-                showFieldError(document.getElementById('employeeId'), 'Employee ID is required');
-                isValid = false;
-            }
-            if (!assignedZone) {
-                showFieldError(document.getElementById('assignedZone'), 'Assigned zone is required');
-                isValid = false;
-            }
-            if (!vehicleNo) {
-                showFieldError(document.getElementById('vehicleNo'), 'Vehicle number is required');
-                isValid = false;
-            }
-            if (!vehicleType) {
-                showFieldError(document.getElementById('vehicleType'), 'Vehicle type is required');
-                isValid = false;
-            }
-            if (!collectorLat || !collectorLng) {
-                showMessage('Please select your current location on the map', 'error');
-                isValid = false;
-            }
-        }
-
-        if (userType === 'vendor') {
-            const companyName = document.getElementById('companyName')?.value.trim();
-            const licenseNo = document.getElementById('licenseNo')?.value.trim();
-            const vendorAddress = document.getElementById('vendorAddress')?.value.trim();
-            const processingMethod = document.getElementById('processingMethod')?.value;
-            const requiredWasteTypes = document.getElementById('requiredWasteTypes')?.selectedOptions;
-            const facilityLat = document.getElementById('facilityLatitude')?.value;
-            const facilityLng = document.getElementById('facilityLongitude')?.value;
-
-            if (!companyName) {
-                showFieldError(document.getElementById('companyName'), 'Company name is required');
-                isValid = false;
-            }
-            if (!licenseNo) {
-                showFieldError(document.getElementById('licenseNo'), 'License number is required');
-                isValid = false;
-            }
-            if (!vendorAddress) {
-                showFieldError(document.getElementById('vendorAddress'), 'Company address is required');
-                isValid = false;
-            }
-            if (!processingMethod) {
-                showFieldError(document.getElementById('processingMethod'), 'Processing method is required');
-                isValid = false;
-            }
-            if (!requiredWasteTypes || requiredWasteTypes.length === 0) {
-                showFieldError(document.getElementById('requiredWasteTypes'), 'Please select at least one waste type');
-                isValid = false;
-            }
-            if (!facilityLat || !facilityLng) {
-                showMessage('Please select your facility location on the map', 'error');
-                isValid = false;
-            }
-        }
-
-        return isValid;
+    // Validate user type
+    if (!userType) {
+        showFieldError(userTypeSelect, 'Please select your user type');
+        isValid = false;
     }
+
+    // Validate first name
+    if (!firstName) {
+        showFieldError(firstNameInput, 'First name is required');
+        isValid = false;
+    } else if (firstName.length < 2) {
+        showFieldError(firstNameInput, 'First name must be at least 2 characters long');
+        isValid = false;
+    }
+
+    // Validate last name
+    if (!lastName) {
+        showFieldError(lastNameInput, 'Last name is required');
+        isValid = false;
+    } else if (lastName.length < 2) {
+        showFieldError(lastNameInput, 'Last name must be at least 2 characters long');
+        isValid = false;
+    }
+
+    // Validate email
+    if (!email) {
+        showFieldError(emailInput, 'Email is required');
+        isValid = false;
+    } else if (!isValidEmail(email)) {
+        showFieldError(emailInput, 'Please enter a valid email address');
+        isValid = false;
+    }
+
+    // Validate phone
+    if (!phone) {
+        showFieldError(phoneInput, 'Phone number is required');
+        isValid = false;
+    } else if (!isValidPhone(phone)) {
+        showFieldError(phoneInput, 'Please enter a valid phone number');
+        isValid = false;
+    }
+
+    // Validate password
+    if (!password) {
+        showFieldError(passwordInput, 'Password is required');
+        isValid = false;
+    } else if (password.length < 8) {
+        showFieldError(passwordInput, 'Password must be at least 8 characters long');
+        isValid = false;
+    } else if (checkPasswordStrength(password) < 3) {
+        showFieldError(passwordInput, 'Password is too weak');
+        isValid = false;
+    }
+
+    // Validate confirm password
+    if (!confirmPassword) {
+        showFieldError(confirmPasswordInput, 'Please confirm your password');
+        isValid = false;
+    } else if (password !== confirmPassword) {
+        showFieldError(confirmPasswordInput, 'Passwords do not match');
+        isValid = false;
+    }
+
+    // Validate terms acceptance
+    if (!termsAccepted) {
+        showFieldError(termsAcceptedCheckbox, 'You must accept the terms and conditions');
+        isValid = false;
+    }
+
+    // Role-specific validation - only validate if fields are visible
+    if (userType === 'resident' && residentFields.style.display === 'block') {
+        const addressLine = document.getElementById('addressLine');
+        const pincode = document.getElementById('pincode');
+        const latitude = document.getElementById('latitude');
+        const longitude = document.getElementById('longitude');
+
+        if (addressLine && !addressLine.value.trim()) {
+            showFieldError(addressLine, 'Address is required');
+            isValid = false;
+        }
+        if (pincode && !pincode.value.trim()) {
+            showFieldError(pincode, 'Pincode is required');
+            isValid = false;
+        }
+        if ((latitude && !latitude.value) || (longitude && !longitude.value)) {
+            showMessage('Please select your location on the map', 'error');
+            isValid = false;
+        }
+    }
+
+    if (userType === 'collector' && collectorFields.style.display === 'block') {
+        const employeeId = document.getElementById('employeeId');
+        const assignedZone = document.getElementById('assignedZone');
+        const vehicleNo = document.getElementById('vehicleNo');
+        const vehicleType = document.getElementById('vehicleType');
+        const collectorLat = document.getElementById('collectorLatitude');
+        const collectorLng = document.getElementById('collectorLongitude');
+
+        if (employeeId && !employeeId.value.trim()) {
+            showFieldError(employeeId, 'Employee ID is required');
+            isValid = false;
+        }
+        if (assignedZone && !assignedZone.value) {
+            showFieldError(assignedZone, 'Assigned zone is required');
+            isValid = false;
+        }
+        if (vehicleNo && !vehicleNo.value.trim()) {
+            showFieldError(vehicleNo, 'Vehicle number is required');
+            isValid = false;
+        }
+        if (vehicleType && !vehicleType.value) {
+            showFieldError(vehicleType, 'Vehicle type is required');
+            isValid = false;
+        }
+        if ((collectorLat && !collectorLat.value) || (collectorLng && !collectorLng.value)) {
+            showMessage('Please select your current location on the map', 'error');
+            isValid = false;
+        }
+    }
+
+    if (userType === 'vendor' && vendorFields.style.display === 'block') {
+        const companyName = document.getElementById('companyName');
+        const licenseNo = document.getElementById('licenseNo');
+        const vendorAddress = document.getElementById('vendorAddress');
+        const processingMethod = document.getElementById('processingMethod');
+        const requiredWasteTypes = document.getElementById('requiredWasteTypes');
+        const facilityLat = document.getElementById('facilityLatitude');
+        const facilityLng = document.getElementById('facilityLongitude');
+
+        if (companyName && !companyName.value.trim()) {
+            showFieldError(companyName, 'Company name is required');
+            isValid = false;
+        }
+        if (licenseNo && !licenseNo.value.trim()) {
+            showFieldError(licenseNo, 'License number is required');
+            isValid = false;
+        }
+        if (vendorAddress && !vendorAddress.value.trim()) {
+            showFieldError(vendorAddress, 'Company address is required');
+            isValid = false;
+        }
+        if (processingMethod && !processingMethod.value) {
+            showFieldError(processingMethod, 'Processing method is required');
+            isValid = false;
+        }
+        if (requiredWasteTypes && requiredWasteTypes.selectedOptions.length === 0) {
+            showFieldError(requiredWasteTypes, 'Please select at least one waste type');
+            isValid = false;
+        }
+        if ((facilityLat && !facilityLat.value) || (facilityLng && !facilityLng.value)) {
+            showMessage('Please select your facility location on the map', 'error');
+            isValid = false;
+        }
+    }
+
+    return isValid;
+}
 
     // Show field error
     function showFieldError(input, message) {
-        const formGroup = input.closest('.form-group');
-        formGroup.classList.add('error');
+    if (!input) return; // Add null check
+    
+    const formGroup = input.closest('.form-group');
+    if (!formGroup) return; // Add null check
+    
+    formGroup.classList.add('error');
 
-        const errorMessage = document.createElement('div');
-        errorMessage.className = 'error-message';
-        errorMessage.textContent = message;
-        formGroup.appendChild(errorMessage);
+    // Remove any existing error message
+    const existingError = formGroup.querySelector('.error-message');
+    if (existingError) {
+        existingError.remove();
     }
+
+    const errorMessage = document.createElement('div');
+    errorMessage.className = 'error-message';
+    errorMessage.textContent = message;
+    formGroup.appendChild(errorMessage);
+}
 
     // Email validation
     function isValidEmail(email) {
@@ -351,8 +342,8 @@ document.addEventListener('DOMContentLoaded', function () {
     function getSignupEndpoint(userType) {
         const endpoints = {
             'resident': '/api/v1/residents/register',
-            'collector': '/api/v1/collectors/register',
-            'vendor': '/api/v1/vendors/register',
+            'collector': '/api/v1/collector/register',
+            'vendor': '/api/v1/vendor/register',
             'admin': '/api/v1/admin/register'
         };
         return endpoints[userType] || '/api/v1/residents/register';
@@ -626,18 +617,20 @@ function toggleRoleFields(userType) {
     // Handle form submission
     signupForm.addEventListener('submit', async function (e) {
         e.preventDefault();
-
+        console.log('button clicked, validating form')
         if (!validateForm()) {
             return;
         }
 
         try {
+            console.log('show loading')
             showLoading();
+            console.log('preparing details')
 
             const userType = userTypeSelect.value;
             const signupData = prepareSignupData(userType);
             const endpoint = getSignupEndpoint(userType);
-
+            console.log('details:', signupData,endpoint)
             const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
@@ -647,7 +640,7 @@ function toggleRoleFields(userType) {
             });
 
             const result = await response.json();
-
+            console.log("result: ", result)
             if (response.ok && result.success) {
                 showMessage('Account created successfully! Please check your email for verification.', 'success');
 
@@ -701,21 +694,25 @@ function toggleRoleFields(userType) {
     });
 
     // Real-time validation for all inputs
-    const inputs = signupForm.querySelectorAll('input, select');
-    inputs.forEach(input => {
-        input.addEventListener('blur', function () {
-            validateField(this);
-        });
+    // Real-time validation for all inputs
+const inputs = signupForm.querySelectorAll('input, select');
+inputs.forEach(input => {
+    input.addEventListener('blur', function () {
+        validateField(this);
+    });
 
-        input.addEventListener('input', function () {
-            // Clear error on input
-            this.closest('.form-group').classList.remove('error');
-            const errorMessage = this.closest('.form-group').querySelector('.error-message');
+    input.addEventListener('input', function () {
+        // Clear error on input
+        const formGroup = this.closest('.form-group');
+        if (formGroup) {
+            formGroup.classList.remove('error');
+            const errorMessage = formGroup.querySelector('.error-message');
             if (errorMessage) {
                 errorMessage.remove();
             }
-        });
+        }
     });
+});
 function setupWasteTypeMultiSelect() {
     const selectElement = document.getElementById('requiredWasteTypes');
     const tagsContainer = document.getElementById('selectedWasteTags');
@@ -776,33 +773,42 @@ function setupWasteTypeMultiSelect() {
 
     // Field-specific validation
     function validateField(input) {
-        const value = input.value.trim();
-        const fieldName = input.name;
+    if (!input) return; // Add null check
+    
+    const value = input.value.trim();
+    const fieldName = input.name;
 
-        switch (fieldName) {
-            case 'firstName':
-            case 'lastName':
-                if (value && value.length < 2) {
-                    showFieldError(input, `${fieldName === 'firstName' ? 'First' : 'Last'} name must be at least 2 characters long`);
-                }
-                break;
-            case 'email':
-                if (value && !isValidEmail(value)) {
-                    showFieldError(input, 'Please enter a valid email address');
-                }
-                break;
-            case 'phone':
-                if (value && !isValidPhone(value)) {
-                    showFieldError(input, 'Please enter a valid phone number');
-                }
-                break;
-            case 'password':
-                if (value && value.length < 8) {
-                    showFieldError(input, 'Password must be at least 8 characters long');
-                }
-                break;
-        }
+    // Clear any existing error first
+    input.closest('.form-group').classList.remove('error');
+    const errorMessage = input.closest('.form-group').querySelector('.error-message');
+    if (errorMessage) {
+        errorMessage.remove();
     }
+
+    switch (fieldName) {
+        case 'firstName':
+        case 'lastName':
+            if (value && value.length < 2) {
+                showFieldError(input, `${fieldName === 'firstName' ? 'First' : 'Last'} name must be at least 2 characters long`);
+            }
+            break;
+        case 'email':
+            if (value && !isValidEmail(value)) {
+                showFieldError(input, 'Please enter a valid email address');
+            }
+            break;
+        case 'phone':
+            if (value && !isValidPhone(value)) {
+                showFieldError(input, 'Please enter a valid phone number');
+            }
+            break;
+        case 'password':
+            if (value && value.length < 8) {
+                showFieldError(input, 'Password must be at least 8 characters long');
+            }
+            break;
+    }
+}
 
     // Keyboard shortcuts
     document.addEventListener('keydown', function (e) {

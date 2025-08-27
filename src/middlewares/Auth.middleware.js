@@ -1,13 +1,12 @@
 import { ApiError } from "../utils/ApiError.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
+
 import jwt from "jsonwebtoken";
 import { Resident } from "../models/resident.model.js";
 import { Admin } from "../models/admin.model.js";
 import {Collector} from "../models/collector.model.js";
 import { Vendor } from "../models/vendor.model.js";
 
-export const verifyJWT = asyncHandler(
-	async (req, _, next) => {
+export const verifyJWT = async (req, _, next) => {
 		try {
 			const token =
 				req.cookies?.accessToken ||
@@ -89,90 +88,25 @@ export const verifyJWT = asyncHandler(
 			);
 		}
 	}
-);
 
 
-export const verifyJWTtemp = asyncHandler(async (req, _, next) => {
-	try {
-		const token =
-			req.cookies?.accessToken ||
-			req.header("Authorization")?.replace("Bearer ", "");
-
-		if (!token) {
-			// No token found, continue without user context
-			req.user = null;
-			req.role = null;
-			return next();
-		}
-
-		const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-
-		// Determine the user model to query based on the role
-		let user, role;
-
-		switch (decodedToken.role) {
-			case "artisan":
-				user = await Artisan.findById(decodedToken._id).select(
-					"-password -refreshToken"
-				);
-				role = "Artisan";
-				break;
-			case "customer":
-				user = await Customer.findById(decodedToken._id).select(
-					"-password -refreshToken"
-				);
-				role = "Customer";
-				break;
-			case "Admin":
-				user = await Admin.findById(decodedToken._id).select(
-					"-password -refreshToken"
-				);
-				role = "Admin";
-				break;
-			case "Vendor":
-				user = await Agent.findById(decodedToken._id).select(
-					"-password -refreshToken"
-				);
-				role = "logisticAgent";
-				break;
-			default:
-				throw new ApiError(401, "Invalid role in token");
-		}
-
-		if (!user) {
-			throw new ApiError(401, "Invalid Access Token");
-		}
-
-		req.user = user;
-		req.role = role;
-		next();
-	} catch (error) {
-		// If token is invalid, continue without user context
-		req.user = null;
-		req.role = null;
-		next();
-	}
-});
 
 
 // Middleware to check if the user is a seller
-export const isSeller = asyncHandler(
+export const isCollector = 
 	async (req, res, next) => {
 		try {
 			// Assuming req.user is populated with the authenticated user
 			const userId = req.user._id;
-			const user = await Artisan.findById(userId);
+			const user = await Collector.findById(userId);
 
 			if (!user) {
 				throw new ApiError(
 					401,
-					"Unauthorized request for Artisan"
+					"Unauthorized request for Collector"
 				);
 			}
 
-			//* Artisan is verified or not check
-			// if (!user.isVerified) {
-			//     throw new ApiError(403, "Seller is not verfied")        }
 
 			next();
 		} catch (error) {
@@ -183,25 +117,23 @@ export const isSeller = asyncHandler(
 			);
 		}
 	}
-);
 
-export const isCustomer = asyncHandler(
+
+export const isResident = 
 	async (req, res, next) => {
 		try {
 			// Assuming req.user is populated with the authenticated user
 			const userId = req.user._id;
-			const user = await Customer.findById(userId);
+			const user = await Resident.findById(userId);
 
 			if (!user) {
 				throw new ApiError(
 					401,
-					"Unauthorized request for Customer"
+					"Unauthorized request for Resident"
 				);
 			}
 
-			//* Artisan is verified or not check
-			// if (!user.isVerified) {
-			//     throw new ApiError(403, "Seller is not verfied")        }
+		
 
 			next();
 		} catch (error) {
@@ -212,26 +144,24 @@ export const isCustomer = asyncHandler(
 			);
 		}
 	}
-);
 
 
-export const isAgent = asyncHandler(
+
+export const isVendor =
 	async (req, res, next) => {
 		try {
 			// Assuming req.user is populated with the authenticated user
 			const userId = req.user._id;
-			const user = await Agent.findById(userId);
+			const user = await Vendor.findById(userId);
 
 			if (!user) {
 				throw new ApiError(
 					401,
-					"Unauthorized request for Customer"
+					"Unauthorized request for Vendor"
 				);
 			}
 
-			//* Artisan is verified or not check
-			// if (!user.isVerified) {
-			//     throw new ApiError(403, "Seller is not verfied")        }
+	
 
 			next();
 		} catch (error) {
@@ -242,4 +172,3 @@ export const isAgent = asyncHandler(
 			);
 		}
 	}
-);

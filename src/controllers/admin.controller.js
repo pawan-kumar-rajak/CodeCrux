@@ -1,20 +1,17 @@
-import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import {
 	Admin,
 	Admin as User,
 } from "../models/admin.model.js";
-// import { uploadOnCloudinary, deleteImageFromCloudinary, MultiUploadOnCloudinary } from "../utils/cloudinary.js"; // Not directly used in these functions
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
-// import { Bin } from "../models/bin.model.js"; // Not directly used
 import { WasteReport } from "../models/wasteReport.model.js";
 import { Resident } from "../models/resident.model.js";
 import { WasteProcessingRequest } from "../models/wasteProcessing.model.js";
 import { Collector } from "../models/collector.model.js";
 import { Vendor } from "../models/vendor.model.js";
-import { Bin } from "../models/bin.model.js"; // Ensure Bin model is imported
+import { Bin } from "../models/bin.model.js";
 import { parseCoordinates } from "../utils/location_handling.js"; // Ensure parseCoordinates is imported
 
 const generateAccessAndRefereshTokens = async (userId) => {
@@ -35,7 +32,7 @@ const generateAccessAndRefereshTokens = async (userId) => {
     }
 };
 
-const registerUser = asyncHandler(async (req, res, next) => {
+const registerUser = async (req, res, next) => {
 	let session;
 	try {
 		// Initialize session
@@ -96,10 +93,10 @@ const registerUser = asyncHandler(async (req, res, next) => {
 			new ApiError(500, "Something went wrong while registering the Admin: " + error.message)
 		);
 	}
-});
+}
 
 
-const loginUser = asyncHandler(async (req, res) => {
+const loginUser = async (req, res) => {
     const { email, username, password } = req.body; // username is not in Admin model, assuming email is primary
     
     if (!email || !password) { // Simplified check
@@ -145,9 +142,9 @@ const loginUser = asyncHandler(async (req, res) => {
                 "Admin logged In Successfully"
             )
         );
-});
+}
 
-const logoutUser = asyncHandler(async (req, res) => {
+const logoutUser = async (req, res) => {
     await User.findByIdAndUpdate(
         req.user._id,
         {
@@ -170,10 +167,9 @@ const logoutUser = asyncHandler(async (req, res) => {
         .clearCookie("accessToken", options)
         .clearCookie("refreshToken", options)
         .json(new ApiResponse(200, {}, "User logged Out"));
-});
+}
 
-const refreshAccessToken = asyncHandler(
-    async (req, res) => {
+const refreshAccessToken = async (req, res) => {
         const incomingRefreshToken =
             req.cookies.refreshToken || req.body.refreshToken;
 
@@ -225,8 +221,8 @@ const refreshAccessToken = asyncHandler(
                 error?.message || "Invalid refresh token"
             );
         }
-    }
-);
+}
+
 
 
 const getAdminProfile = async (req, res, next) => {
@@ -240,10 +236,10 @@ const getAdminProfile = async (req, res, next) => {
     } catch (error) {
         next(new ApiError(500, 'Error fetching admin profile: ' + error.message));
     }
-};
+}
 
 // Get all pending waste reports (unidentified) for admin review
-const getAllPendingWasteReports = asyncHandler(async (req, res, next) => {
+const getAllPendingWasteReports = async (req, res, next) => {
   try {
       const reports = await WasteReport.find({ status: 'unidentified' })
           .populate('reportedBy', 'fullName email phoneNo')
@@ -255,9 +251,9 @@ const getAllPendingWasteReports = asyncHandler(async (req, res, next) => {
   } catch (error) {
       next(new ApiError(500, 'Error fetching pending waste reports: ' + error.message));
   }
-});
+}
 
-const approveWasteReport = asyncHandler(async (req, res, next) => {
+const approveWasteReport = async (req, res, next) => {
     const { reportId, wasteType, adminNotes } = req.body;
     
     if (!reportId || !wasteType || !mongoose.Types.ObjectId.isValid(reportId)) {
@@ -351,10 +347,10 @@ const approveWasteReport = asyncHandler(async (req, res, next) => {
     }
   
     res.status(200).json(new ApiResponse(200, report, 'Waste report approved and assigned to bin successfully.'));
-});
+}
   
 // Modified: Reject waste report (mark for landfill, potentially remove from bin)
-const rejectWasteReport = asyncHandler(async (req, res, next) => {
+const rejectWasteReport = async (req, res, next) => {
     const { reportId, adminNotes } = req.body;
     
     if (!reportId || !mongoose.Types.ObjectId.isValid(reportId)) {
@@ -424,10 +420,10 @@ const rejectWasteReport = asyncHandler(async (req, res, next) => {
     }
   
     res.status(200).json(new ApiResponse(200, { report, collector }, 'Waste report rejected and assigned to collector for landfill.'));
-});
+}
 
 // Modified: Handle expired processing requests (for Bins)
-const handleExpiredRequest = asyncHandler(async (req, res, next) => {
+const handleExpiredRequest = async (req, res, next) => {
   const { requestId } = req.body; // This is a WasteProcessingRequest ID
       
   if (!requestId || !mongoose.Types.ObjectId.isValid(requestId)) {
@@ -458,10 +454,10 @@ const handleExpiredRequest = asyncHandler(async (req, res, next) => {
   // For now, we'll just ensure it's available for other vendors.
 
   res.status(200).json(new ApiResponse(200, { request }, 'Expired request handled. Bin is now available for other vendors.'));
-});
+}
 
 // Modified: Get admin dashboard stats
-const getAdminDashboard = asyncHandler(async (req, res, next) => {
+const getAdminDashboard = async (req, res, next) => {
   try {
       const totalReports = await WasteReport.countDocuments();
       const pendingReports = await WasteReport.countDocuments({ status: 'unidentified' });
@@ -492,7 +488,7 @@ const getAdminDashboard = asyncHandler(async (req, res, next) => {
     console.error("Error fetching admin dashboard: ", error);
       next(new ApiError(500, 'Error fetching admin dashboard: ' + error.message));
   }
-});
+}
 
 
 // Get all expired requests (not accepted within 1 day)
@@ -509,15 +505,15 @@ const getExpiredRequests = async (req, res, next) => {
   } catch (error) {
       next(new ApiError(500, 'Error fetching expired requests: ' + error.message));
   }
-};
+}
 
 //get all collector details 
-const getCollectors = asyncHandler(async(req,res,next)=>{
+const getCollectors = async(req,res,next)=>{
     const collectors = await Collector.find({}).lean(); // Use lean()
     res.status(200).json(new ApiResponse(200, collectors, 'collectors fetched success'));
-})
+}
 
-const getCollectorDetails =  asyncHandler(async(req,res,next)=>{
+const getCollectorDetails =  async(req,res,next)=>{
     const {collectorId} = req.params;
     if (!mongoose.Types.ObjectId.isValid(collectorId)) {
         return next(new ApiError(400, "Invalid collector ID format."));
@@ -527,9 +523,9 @@ const getCollectorDetails =  asyncHandler(async(req,res,next)=>{
         return next(new ApiError(404, "Collector not found."));
     }
     res.status(200).json(new ApiResponse(200, collector, 'collector details fetched successfully'));
-})
+}
 
-const getResidentDetails =  asyncHandler(async(req,res,next)=>{
+const getResidentDetails =  async(req,res,next)=>{
     const {ResidentId} = req.params;
     if (!mongoose.Types.ObjectId.isValid(ResidentId)) {
         return next(new ApiError(400, "Invalid Resident ID format."));
@@ -539,9 +535,9 @@ const getResidentDetails =  asyncHandler(async(req,res,next)=>{
         return next(new ApiError(404, "Resident not found."));
     }
     res.status(200).json(new ApiResponse(200, resident, 'Resident details fetched successfully'));
-})
+}
 
-const getVendorDetails =  asyncHandler(async(req,res,next)=>{
+const getVendorDetails =  async(req,res,next)=>{
     const {VendorId} = req.params;
     if (!mongoose.Types.ObjectId.isValid(VendorId)) {
         return next(new ApiError(400, "Invalid Vendor ID format."));
@@ -551,12 +547,11 @@ const getVendorDetails =  asyncHandler(async(req,res,next)=>{
         return next(new ApiError(404, "Vendor not found."));
     }
     res.status(200).json(new ApiResponse(200, vendor, 'Vendor details fetched successfully'));
-})
+}
 
 
 
-
-const createBin = asyncHandler(async (req, res, next) => {
+const createBin = async (req, res, next) => {
     const { binId, location, wasteType, assignedZone } = req.body;
     if (!binId || !location || !location.coordinates || !wasteType || !assignedZone) {
         return next(new ApiError(400, "Bin ID, location (coordinates), waste type, and assigned zone are required."));
@@ -585,11 +580,11 @@ const createBin = asyncHandler(async (req, res, next) => {
     });
 
     res.status(201).json(new ApiResponse(201, newBin, "Bin created successfully"));
-});
+}
 
 
 // NEW FUNCTION for admin to get details of any waste report
-const getReportDetails = asyncHandler(async (req, res, next) => {
+const getReportDetails = async (req, res, next) => {
     const { reportId } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(reportId)) {
@@ -612,10 +607,10 @@ const getReportDetails = asyncHandler(async (req, res, next) => {
     };
 
     return res.status(200).json(new ApiResponse(200, responseData, "Report details fetched successfully"));
-});
+}
 
 
-const getAllResidents = asyncHandler(async (req, res, next) => {
+const getAllResidents = async (req, res, next) => {
     // Fetches all residents, excluding sensitive data like passwords.
     const residents = await Resident.find({}).select('-password -refreshToken').lean();
 
@@ -625,10 +620,10 @@ const getAllResidents = asyncHandler(async (req, res, next) => {
     }
 
     res.status(200).json(new ApiResponse(200, residents, 'All residents fetched successfully'));
-});
+}
 
 
-const getAllVendors = asyncHandler(async (req, res, next) => {
+const getAllVendors = async (req, res, next) => {
     // Fetches all vendors, excluding sensitive data.
     const vendors = await Vendor.find({}).select('-password -refreshToken').lean();
 
@@ -637,10 +632,10 @@ const getAllVendors = asyncHandler(async (req, res, next) => {
     }
     
     res.status(200).json(new ApiResponse(200, vendors, 'All vendors fetched successfully'));
-});
+}
 
 // NEW FUNCTION: Aggregates environmental impact data for the admin dashboard.
-const getEnvironmentalImpactStats = asyncHandler(async (req, res, next) => {
+const getEnvironmentalImpactStats = async (req, res, next) => {
     try {
         // --- Daily Aggregation Pipeline ---
         const dailyStats = await WasteProcessingRequest.aggregate([
@@ -766,7 +761,7 @@ const getEnvironmentalImpactStats = asyncHandler(async (req, res, next) => {
     } catch (error) {
         return next(new ApiError(500, "Error fetching environmental impact statistics: " + error.message));
     }
-});
+}
 
 
 export{

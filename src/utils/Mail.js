@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import { asyncHandler } from "./asyncHandler.js";
+
 import { Resident} from "../models/resident.model.js";
 
 const transporter = nodemailer.createTransport({
@@ -17,7 +17,7 @@ const sendOTPs = async (to, subject, text, validity) => {
   const currentYear = new Date().getFullYear();
 
   await transporter.sendMail({
-    from: `"Clean-City" <${process.env.EMAIL}>`,
+    from: `"EcoChain" <${process.env.EMAIL}>`,
     to,
     subject,
     html: `

@@ -1,4 +1,3 @@
-import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import {
 	Resident,
@@ -6,8 +5,6 @@ import {
 } from "../models/resident.model.js";
 import {
 	uploadOnCloudinary,
-	deleteImageFromCloudinary,
-	MultiUploadOnCloudinary,
 } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
@@ -16,17 +13,14 @@ import { sendOTPs, sendFollowUp } from "../utils/Mail.js";
 import { Address } from "../models/address.model.js";
 import mongoose from "mongoose";
 import { parseCoordinates, AddressFromPincode } from "../utils/location_handling.js";
-import { Bin } from "../models/bin.model.js"; // Not directly used in these functions, but kept for consistency
+import { Bin } from "../models/bin.model.js"; 
 import { WasteReport } from "../models/wasteReport.model.js";
 import fs from "fs";
-import path from "path";
-import axios from "axios";
-import FormData from "form-data";
-import { mlService } from "../utils/mlService.js"; // Import the mlService utility
-// import {detectWasteAndAnalyze} from "../ML/GarbageDetector.js"
+import { mlService } from "../utils/mlService.js"; 
+
 import { Vendor } from "../models/vendor.model.js";
 import { WasteProcessingRequest } from "../models/wasteProcessing.model.js";
-import { report } from "process";
+
 
 const generateAccessAndRefereshTokens = async (userId) => {
 	try {
@@ -47,7 +41,7 @@ const generateAccessAndRefereshTokens = async (userId) => {
 };
 
 //send OTP functionality
-const send_registrer_Otp = asyncHandler(async (req, res, next) => {
+const send_registrer_Otp = async (req, res, next) => {
 	const { email } = req.body;
 
 	if (!email) {
@@ -87,9 +81,9 @@ const send_registrer_Otp = asyncHandler(async (req, res, next) => {
 				`otp sent successfully to ${email}`
 			)
 		);
-});
+}
 
-const sendForgotPasswordOTP = asyncHandler(async (req, res, next) => {
+const sendForgotPasswordOTP = async (req, res, next) => {
 	const { email } = req.body;
 
 	if (!email || email.trim() === "") {
@@ -124,10 +118,10 @@ const sendForgotPasswordOTP = asyncHandler(async (req, res, next) => {
 	res.status(200).json(
 		new ApiResponse(200, {}, "OTP sent to your email successfully")
 	);
-});
+}
 
 
-const change_email_otp = asyncHandler(async (req, res, next) => {
+const change_email_otp = async (req, res, next) => {
 	const { email } = req.body;
 
 	if (!email || email.trim() === "") {
@@ -162,10 +156,10 @@ const change_email_otp = asyncHandler(async (req, res, next) => {
 	res.status(200).json(
 		new ApiResponse(200, {}, "OTP sent to your email successfully")
 	);
-});
+}
 
 //verify OTP
-const verifyOtp = asyncHandler(async (req, res, next) => {
+const verifyOtp = async (req, res, next) => {
 	const { email, otp } = req.body;
 
 	if (!email || !otp) {
@@ -187,10 +181,10 @@ const verifyOtp = asyncHandler(async (req, res, next) => {
 		.json(
 			new ApiResponse(200, {}, "OTP verified successfully")
 		);
-});
+}
 
 
-const registerUser = asyncHandler(async (req, res, next) => {
+const registerUser = async (req, res, next) => {
 	let session;
 	try {
 		// Initialize session
@@ -275,10 +269,9 @@ const registerUser = asyncHandler(async (req, res, next) => {
 		console.error("Error during transaction: ", error);
 		return next(new ApiError(500, "Something went wrong while registering the User"));
 	}
-});
+}
 
-
-const loginUser = asyncHandler(async (req, res, next) => {
+const loginUser = async (req, res, next) => {
 	const { email, username, password } = req.body;
 
 	if (!(username || email)) {
@@ -327,14 +320,14 @@ const loginUser = asyncHandler(async (req, res, next) => {
 				"User logged In Successfully"
 			)
 		);
-});
+}
 
-const logoutUser = asyncHandler(async (req, res) => {
+const logoutUser = async (req, res) => {
 	await User.findByIdAndUpdate(
 		req.user._id,
 		{
 			$unset: {
-				refreshToken: 1, // this removes the field from document
+				refreshToken: 1,
 			},
 		},
 		{
@@ -352,9 +345,9 @@ const logoutUser = asyncHandler(async (req, res) => {
 		.clearCookie("accessToken", options)
 		.clearCookie("refreshToken", options)
 		.json(new ApiResponse(200, {}, "User logged Out"));
-});
+}
 
-const refreshAccessToken = asyncHandler(
+const refreshAccessToken = 
 	async (req, res) => {
 		const incomingRefreshToken =
 			req.cookies.refreshToken || req.body.refreshToken;
@@ -408,9 +401,8 @@ const refreshAccessToken = asyncHandler(
 			);
 		}
 	}
-);
 
-const changeCurrentPassword = asyncHandler(
+const changeCurrentPassword = 
 	async (req, res) => {
 		const { oldPassword, newPassword } = req.body;
 
@@ -436,39 +428,36 @@ const changeCurrentPassword = asyncHandler(
 				)
 			);
 	}
-);
 
-const getCurrentUser = asyncHandler(async (req, res) => {
-	// Fetch user details from the database (assuming user is already attached to req.user)
-	const user = await User.findById(req.user.id).exec(); // Changed from Customer to User
-
+const getCurrentUser = async (req, res,next) => {
+	
+	const user = await User.findById(req.user.id).exec();
 	if (!user) {
-		return res.status(404).json(new ApiResponse(404, null, 'User not found'));
+		return next(new ApiError(404, "User not found"));
 	}
 
-	// Fetch the address associated with the user from the Address schema
-	// Assuming address is directly populated on the user model or can be fetched via user.address ID
-	const address = await Address.findById(user.address).exec(); // Assuming user.address holds the ObjectId
+	
+	const address = await Address.findById(user.address).exec(); 
 
-	// Clone the user object to safely add the address
-	const userWithAddress = user.toObject(); // Convert the Mongoose document to a plain JavaScript object
+	
+	const userWithAddress = user.toObject(); 
 
-	// Attach the address to the cloned object
-	userWithAddress.address = address; // Add the address field to the user object
 
-	// Return the updated user object with the address
+	userWithAddress.address = address;
+
+	
 	return res.status(200).json(
 		new ApiResponse(200, userWithAddress, "User fetched successfully")
 	);
-});
+}
 
 
-const updateAccountDetails = asyncHandler(
-	async (req, res) => {
+const updateAccountDetails = 
+	async (req, res,next) => {
 		const { fullName, email } = req.body;
 
 		if (!fullName || !email) {
-			throw new ApiError(400, "All fields are required");
+			return next( new ApiError(400, "All fields are required"))
 		}
 
 		const user = await User.findByIdAndUpdate(
@@ -492,13 +481,12 @@ const updateAccountDetails = asyncHandler(
 				)
 			);
 	}
-);
 
-const updateUserAvatar = asyncHandler(async (req, res) => {
+const updateUserAvatar = async (req, res,next) => {
 	const avatarLocalPath = req.file?.path;
 
 	if (!avatarLocalPath) {
-		throw new ApiError(400, "Avatar file is missing");
+		return next( new ApiError(400, "Avatar file is missing"))
 	}
 
 	// TODO: delete old image - assignment (This is a good reminder for future implementation)
@@ -506,10 +494,10 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 	const avatar = await uploadOnCloudinary(avatarLocalPath);
 
 	if (!avatar.url) {
-		throw new ApiError(
+		return next( new ApiError(
 			400,
 			"Error while uploading on avatar"
-		);
+		))
 	}
 
 	const user = await User.findByIdAndUpdate(
@@ -531,13 +519,13 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 				"Avatar image updated successfully"
 			)
 		);
-});
+}
 
 
 
 // Modified: Main function for residents to report waste
 const reportWaste = async (req, res, next) => {
-	let imagePath = null; // To store the path of the uploaded image for cleanup
+	let imagePath = null;
 	let session;
 	try {
 		session = await mongoose.startSession();
@@ -753,8 +741,7 @@ const reportWaste = async (req, res, next) => {
 	}
 };
 
-//delete report waste if its not been pckedup yet.
-// NEW FUNCTION: Safely deletes a waste report and reverses its impact.
+
 const deleteWasteReport = async (req, res, next) => {
     const { reportId } = req.params;
     const residentId = req.user._id;
@@ -845,28 +832,6 @@ const deleteWasteReport = async (req, res, next) => {
         session.endSession();
         return next(error); // Pass error to your global error handler.
     }
-}
-
-// Helper function to calculate reward points (updated to use new ML response structure)
-function calculateRewardPoints(weight, mlResponse, user_ai_match, fraud_detection) {
-	let basePoints = parseFloat(weight) * 10; // 10 points per kg
-
-	if (mlResponse.waste_analysis.recyclable) {
-		basePoints *= 1.5;
-	}
-	if (mlResponse.detection_results.highest_confidence > 80) {
-		basePoints *= 1.2;
-	}
-	if (user_ai_match) {
-		basePoints *= 1.3;
-	}
-	if (fraud_detection.is_suspicious) {
-		basePoints *= 0.5;
-	}
-
-	basePoints += (mlResponse.waste_analysis.waste_details.energy_potential * 0.1) + (mlResponse.waste_analysis.waste_details.co2_reduction * 0.5);
-
-	return Math.round(basePoints);
 }
 
 
@@ -975,61 +940,6 @@ const getResidentDashboard = async (req, res, next) => {
 	}
 };
 
-// Modified: Get waste details (ensure it shows bin info)
-// const getWasteDetails = async (req, res, next) => {
-// 	try {
-// 		const { wasteId } = req.params;
-// 		const residentId = req.user._id;
-
-// 		const wasteReport = await WasteReport.findById(wasteId)
-// 			.populate('reportedBy', 'fullName phoneNo email')
-// 			.populate('assignedBin', 'binId location fillLevel wasteType currentWasteComposition') // Populate bin details
-// 			.lean();
-
-// 		if (!wasteReport) {
-// 			return next(new ApiError(404, "Waste report not found"));
-// 		}
-
-// 		if (wasteReport.reportedBy._id.toString() !== residentId.toString()) {
-// 			return next(new ApiError(403, "Access denied"));
-// 		}
-
-// 		const wasteDetails = {
-// 			_id: wasteReport._id,
-// 			userReportedType: wasteReport.userReportedType,
-// 			mlIdentifiedType: wasteReport.mlIdentifiedType,
-// 			approximateWeight: wasteReport.approximateWeight,
-// 			status: wasteReport.status,
-// 			assignedZone: wasteReport.assignedZone,
-// 			photoUrl: wasteReport.photoUrl,
-// 			coordinates: wasteReport.coordinates,
-// 			createdAt: wasteReport.createdAt,
-// 			reportedBy: {
-// 				fullName: wasteReport.reportedBy.fullName,
-// 				phone: wasteReport.reportedBy.phoneNo,
-// 				email: wasteReport.reportedBy.email
-// 			},
-// 			mlDetails: wasteReport.mlDetails || {},
-// 			assignedBin: wasteReport.assignedBin ? { // Format bin details
-// 				_id: wasteReport.assignedBin._id,
-// 				binId: wasteReport.assignedBin.binId,
-// 				location: wasteReport.assignedBin.location.coordinates,
-// 				fillLevel: wasteReport.assignedBin.fillLevel,
-// 				wasteType: wasteReport.assignedBin.wasteType,
-// 				currentWasteComposition: wasteReport.assignedBin.currentWasteComposition
-// 			} : null,
-// 			processingDetails: wasteReport.processingDetails || null // Include processing details
-// 		};
-
-// 		return res.status(200).json(
-// 			new ApiResponse(200, wasteDetails, "Waste details fetched successfully")
-// 		);
-
-// 	} catch (error) {
-// 		console.error('Error fetching waste details:', error);
-// 		return next(new ApiError(500, "Error fetching waste details: " + error.message));
-// 	}
-// };
 // MODIFIED FUNCTION: Now includes the bin's current collection status for better tracking.
 const getWasteDetails = async (req, res, next) => {
 	try {
@@ -1075,7 +985,7 @@ const getWasteDetails = async (req, res, next) => {
 			mlDetails: wasteReport.mlDetails || {},
 			assignedBin: wasteReport.assignedBin,
 			processingDetails: wasteReport.processingDetails || null,
-			currentCollectionStatus: currentProcessingRequest // <-- ADDED FOR REAL-TIME TRACKING
+			currentCollectionStatus: currentProcessingRequest 
 		};
 
 		return res.status(200).json(
@@ -1092,7 +1002,7 @@ const getMyWasteReports = async (req, res, next) => {
 	try {
 		const reports = await WasteReport.find({ reportedBy: req.user._id })
 			.sort({ createdAt: -1 })
-			.lean(); // Use .lean() for faster reads
+			.lean(); 
 
 		res.status(200).json(new ApiResponse(200, reports, 'Waste reports fetched successfully'));
 	} catch (error) {

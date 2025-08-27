@@ -1,6 +1,6 @@
 import { Vendor, Vendor as User } from "../models/vendor.model.js";
 import { WasteReport } from "../models/wasteReport.model.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
+
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { WasteProcessingRequest } from "../models/wasteProcessing.model.js";
@@ -28,7 +28,7 @@ const generateAccessAndRefereshTokens = async (userId) => {
     }
 };
 
-const registerVendor = asyncHandler(async (req, res, next) => {
+const registerVendor = async (req, res, next) => {
     let session;
     try {
         // Start session for transaction handling
@@ -117,7 +117,7 @@ const registerVendor = asyncHandler(async (req, res, next) => {
             return next(new ApiError(500, "Something went wrong while registering the vendor"));
         }
 
-        // Generate access and refresh tokens for the vendor (if needed)
+   
         const { accessToken, refreshToken } = await generateAccessAndRefereshTokens(createdVendor._id);
 
         // Send success response
@@ -134,11 +134,11 @@ const registerVendor = asyncHandler(async (req, res, next) => {
         console.error("Error during transaction: ", error);
         return next(new ApiError(500, "Something went wrong while registering the vendor: " + error.message));
     }
-});
+}
 
 
-const loginUser = asyncHandler(async (req, res, next) => {
-    const { email, password } = req.body; // Removed username as it's not in vendor model
+const loginUser = async (req, res, next) => {
+    const { email, password } = req.body; 
     
     if (!email || !password) {
         throw new ApiError(400, "Email and password are required");
@@ -183,14 +183,14 @@ const loginUser = asyncHandler(async (req, res, next) => {
                 "Vendor logged In Successfully"
             )
         );
-});
+}
 
-const logoutUser = asyncHandler(async (req, res) => {
+const logoutUser = async (req, res) => {
     await User.findByIdAndUpdate(
         req.user._id,
         {
             $unset: {
-                refreshToken: 1, // this removes the field from document
+                refreshToken: 1, 
             },
         },
         {
@@ -208,9 +208,9 @@ const logoutUser = asyncHandler(async (req, res) => {
         .clearCookie("accessToken", options)
         .clearCookie("refreshToken", options)
         .json(new ApiResponse(200, {}, "User logged Out"));
-});
+}
 
-const refreshAccessToken = asyncHandler(
+const refreshAccessToken = 
     async (req, res) => {
         const incomingRefreshToken =
             req.cookies.refreshToken || req.body.refreshToken;
@@ -264,84 +264,9 @@ const refreshAccessToken = asyncHandler(
             );
         }
     }
-);
-
-// Get available waste reports matching vendor's requirements
-// const getAvailableWaste = asyncHandler(async (req, res, next) => {
-//     try {
-//         const vendor = await Vendor.findById(req.user._id).lean();
-
-//         if (!vendor || !vendor.processingFacilityLocation || !vendor.processingFacilityLocation.coordinates) {
-//             return next(new ApiError(404, 'Vendor or processing facility location not found. Please update your profile.'));
-//         }
-
-//         // Find bins near vendor's facility
-//         const candidateBins = await Bin.find({
-//             location: {
-//                 $near: {
-//                     $geometry: {
-//                         type: "Point",
-//                         coordinates: vendor.processingFacilityLocation.coordinates
-//                     },
-//                     $maxDistance: 1000000 // 100 km in meters
-//                 }
-//             },
-//             fillLevel: { $gt: 50 },
-//             $or: [
-//                 { wasteType: { $in: vendor.requiredWasteTypes } },
-//                 { 'currentWasteComposition': { $exists: true, $ne: {} } }
-//             ]
-//         }).lean();
-
-//         // Further filter bins
-//         const filteredBins = candidateBins.filter(bin => {
-//             if (vendor.requiredWasteTypes.includes(bin.wasteType)) return true;
-//             for (const [wasteTypeInBin] of Object.entries(bin.currentWasteComposition || {})) {
-//                 if (vendor.requiredWasteTypes.includes(wasteTypeInBin)) return true;
-//             }
-//             return false;
-//         });
-
-     
-
-//         // Exclude bins with existing processing requests
-//         const existingRequestsForBins = await WasteProcessingRequest.find({
-//             bin: { $in: filteredBins.map(b => b._id) },
-//             status: { $in: ['pending_vendor_offer', 'vendor_accepted', 'collector_assigned', 'collected_from_bin'] }
-//         }).select('bin').lean();
-
-//         const binsWithExistingRequests = new Set(existingRequestsForBins.map(req => req.bin.toString()));
-
-//         const finalAvailableBins = filteredBins.filter(bin => !binsWithExistingRequests.has(bin._id.toString()));
-
-//         // Get representative reports only, fully populated
-//         const representativeReports = (
-//             await Promise.all(
-//                 finalAvailableBins.map(bin =>
-//                     WasteReport.findOne({ assignedBin: bin._id })
-//                         .populate('reportedBy', 'fullName phoneNo')
-//                         .lean()
-//                 )
-//             )
-//         ).filter(Boolean); // Remove nulls
 
 
-//         res.status(200).json(
-//             new ApiResponse(
-//                 200,
-//                 representativeReports,
-//                 'Available waste reports fetched successfully'
-//             )
-//         );
-//     } catch (error) {
-//         console.error('Error in getAvailableWaste:', error);
-//         next(new ApiError(500, 'Error fetching available waste bins: ' + error.message));
-//     }
-// });
-
-// MODIFIED FUNCTION
-// Get available waste reports matching vendor's requirements
-const getAvailableWaste = asyncHandler(async (req, res, next) => {
+const getAvailableWaste = async (req, res, next) => {
     try {
         // 1. Get vendor and ensure location exists
         const vendor = await Vendor.findById(req.user._id).lean();
@@ -404,12 +329,12 @@ const getAvailableWaste = asyncHandler(async (req, res, next) => {
         console.error('Error in getAvailableWaste:', error);
         next(new ApiError(500, 'Error fetching available waste bins: ' + error.message));
     }
-});
+}
 
 
 // Request waste collection
 // MODIFIED FUNCTION: Assigns the closest collector instead of a random one.
-const requestWasteCollection = asyncHandler(async (req, res, next) => {
+const requestWasteCollection = async (req, res, next) => {
     let { binIds } = req.body;
 
     if (!Array.isArray(binIds) || binIds.length === 0) {
@@ -497,11 +422,11 @@ const requestWasteCollection = asyncHandler(async (req, res, next) => {
     }
 
     res.status(201).json(new ApiResponse(201, { successfullyRequested, failedRequests }, 'Collection request processed and assigned to the closest available collectors.'));
-});
+}
 
 
 // Get vendor dashboard stats
-const getVendorDashboard = asyncHandler(async (req, res, next) => {
+const getVendorDashboard = async (req, res, next) => {
     try {
         const vendor = await Vendor.findById(req.user._id).lean();
 
@@ -525,7 +450,7 @@ const getVendorDashboard = asyncHandler(async (req, res, next) => {
             totalRequests: totalRequestsMade,
             pendingRequests: pendingRequests,
             deliveredRequests: deliveredRequests,
-            processedRequests: processedRequests, // New metric
+            processedRequests: processedRequests, 
             wasteProcessed: vendor.wasteProcessed || 0,
             energyProduced: vendor.energyProduced || 0,
             co2Reduced: vendor.co2Reduced || 0,
@@ -544,12 +469,12 @@ const getVendorDashboard = asyncHandler(async (req, res, next) => {
         console.error('Error fetching vendor dashboard:', error);
         next(new ApiError(500, 'Error fetching vendor dashboard: ' + error.message));
     }
-});
+}
 
 // Reject waste request
-const rejectWasteRequest = asyncHandler(async (req, res, next) => {
+const rejectWasteRequest = async (req, res, next) => {
     try {
-        const { requestId } = req.body; // This is a WasteProcessingRequest ID
+        const { requestId } = req.body; 
 
         if (!requestId || !mongoose.Types.ObjectId.isValid(requestId)) {
             return next(new ApiError(400, "Invalid request ID."));
@@ -589,11 +514,9 @@ const rejectWasteRequest = asyncHandler(async (req, res, next) => {
         console.error('Error rejecting waste request:', error);
         next(new ApiError(500, 'Error rejecting waste request: ' + error.message));
     }
-});
+}
 
-// Modified: View complete details of garbage (WasteReport or WasteProcessingRequest for a Bin)
-// MODIFIED FUNCTION: Renamed and refactored to specifically get Bin details
-const viewGarbageDetails = asyncHandler(async (req, res, next) => {
+const viewGarbageDetails = async (req, res, next) => {
     try {
         const { garbageId: binId } = req.params;
 
@@ -646,74 +569,11 @@ const viewGarbageDetails = asyncHandler(async (req, res, next) => {
         console.error('Error in viewGarbageDetails:', error);
         next(new ApiError(500, 'Error fetching bin details: ' + error.message));
     }
-});
+}
 
 
-// const markProcessingComplete = asyncHandler(async (req, res, next) => {
-//     const { requestId, energyGenerated, co2Reduced, processingMethod } = req.body;
 
-//     if (!requestId || !mongoose.Types.ObjectId.isValid(requestId)) {
-//         return next(new ApiError(400, "Invalid request ID."));
-//     }
-//     if (typeof energyGenerated !== 'number' || typeof co2Reduced !== 'number' || !processingMethod) {
-//         return next(new ApiError(400, "Energy generated, CO2 reduced, and processing method are required."));
-//     }
-
-//     const request = await WasteProcessingRequest.findById(requestId)
-//                                 .populate('bin')
-//                                 .lean();
-
-//     if (!request) {
-//         return next(new ApiError(404, 'Processing request not found.'));
-//     }
-//     if (request.vendor.toString() !== req.user._id.toString()) {
-//         return next(new ApiError(403, 'Not authorized to complete this request.'));
-//     }
-//     if (request.status !== 'delivered_to_vendor') {
-//         return next(new ApiError(400, `Cannot mark as processed. Current status is ${request.status}. Expected 'delivered_to_vendor'.`));
-//     }
-
-//     // Update WasteProcessingRequest status and metrics
-//     await WasteProcessingRequest.findByIdAndUpdate(requestId, {
-//         status: 'processed_by_vendor',
-//         energyMetrics: {
-//             generated: energyGenerated,
-//             co2Reduced: co2Reduced,
-//             timestamp: new Date()
-//         },
-//         processingCompletionDetails: {
-//             timestamp: new Date(),
-//             methodUsed: processingMethod,
-//             energyGenerated: energyGenerated,
-//             co2Reduced: co2Reduced
-//         }
-//     });
-
-//     // Update all associated WasteReports to 'processed' status and add processing details
-//     await WasteReport.updateMany(
-//         { assignedBin: request.bin._id, status: 'delivered_to_vendor' },
-//         {
-//             $set: {
-//                 status: 'processed',
-//                 'processingDetails.completedAt': new Date(),
-//                 'processingDetails.energyGenerated': energyGenerated,
-//                 'processingDetails.co2Reduced': co2Reduced,
-//                 'processingDetails.processedByVendor': req.user._id,
-//                 'processingDetails.processingMethod': processingMethod
-//             }
-//         }
-//     );
-
-//     // Update Vendor's overall metrics (already done by collector on delivery, but can be re-confirmed/adjusted here if needed)
-//     // For now, assuming collector's markAsDelivered updates vendor's overall totals.
-//     // If you want to update vendor's totals *only* on processing completion, move that logic here.
-
-//     res.status(200).json(new ApiResponse(200, null, 'Waste processing marked as complete.'));
-// });
-
-// MODIFIED FUNCTION: Now updates the Vendor's total energy and CO2 metrics.
-// This is the final, authoritative step for these metrics.
-const markProcessingComplete = asyncHandler(async (req, res, next) => {
+const markProcessingComplete = async (req, res, next) => {
     const { requestId, energyGenerated, co2Reduced, processingMethod } = req.body;
 
     if (!requestId || !mongoose.Types.ObjectId.isValid(requestId)) {
@@ -760,12 +620,9 @@ const markProcessingComplete = asyncHandler(async (req, res, next) => {
                 $inc: { rewardCoins: impactBonus }
             });
 
-            // (Optional) Here you could trigger a notification to the user about their bonus.
+            // (Optional) could trigger a notification to the user about their bonus.
         }
     }
-    // --- END NEW LOGIC ---
-
-    // --- LOGIC CHANGE ---
     // 1. Update the WasteProcessingRequest
     await WasteProcessingRequest.findByIdAndUpdate(requestId, {
         status: 'processed_by_vendor',
@@ -797,13 +654,13 @@ const markProcessingComplete = asyncHandler(async (req, res, next) => {
             co2Reduced: co2Reduced
         }
     });
-    // --- END LOGIC CHANGE ---
+   
 
     res.status(200).json(new ApiResponse(200, {}, 'Waste processing marked as complete.'));
-});
+}
 
-// NEW FUNCTION: Gets exhaustive details for a single WasteProcessingRequest.
-const getProcessingRequestDetails = asyncHandler(async (req, res, next) => {
+
+const getProcessingRequestDetails = async (req, res, next) => {
     const { requestId } = req.params;
     const vendorId = req.user._id;
 
@@ -830,7 +687,7 @@ const getProcessingRequestDetails = asyncHandler(async (req, res, next) => {
     }
 
     return res.status(200).json(new ApiResponse(200, requestDetails, "Processing request details fetched successfully."));
-});
+}
 
 export {
     registerVendor,

@@ -5,6 +5,8 @@ import {
 } from "../models/resident.model.js";
 import {
 	uploadOnCloudinary,
+	MultiUploadOnCloudinary,
+	deleteImageFromCloudinary
 } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
@@ -544,7 +546,7 @@ const reportWaste = async (req, res, next) => {
 
 		const file = req.files[0];
 		imagePath = file.path; // Multer saves the file temporarily here
-
+		
 		let mlResponseData = null;
 		try {
 			console.log("Calling external Python ML service for detection...");
@@ -569,7 +571,7 @@ const reportWaste = async (req, res, next) => {
 				waste_analysis: { recyclable: false, waste_details: {} }
 			};
 		}
-
+		console.log('ml repnse:', mlResponseData)
 		// 2. Perform fraud detection in Express.js
 		const fraudDetection = await detectFraud({
 			userId: residentId,

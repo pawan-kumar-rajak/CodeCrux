@@ -82,11 +82,10 @@ export const verifyJWT = async (req, _, next) => {
 			// console.log("user logged out successfully");
 			next();
 		} catch (error) {
-			throw new ApiError(
+			return next(new ApiError(
 				401,
 				error?.message || "Invalid access token"
-			);
-		}
+			))	}
 	}
 
 

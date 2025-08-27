@@ -1,63 +1,151 @@
-
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vendor Dashboard - Available Waste</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <link rel="stylesheet" href="vendor-styles.css">
-  <link rel="stylesheet" href="/public/CSS/vendor.dashboard.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Dashboard | CleanCity Energy</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <link rel="stylesheet" href="/public/CSS/vendor.dashboard.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
-  <div class="vendor-dashboard">
-    <header class="dashboard-header">
-      <h1><i class="fas fa-trash-alt"></i> Available Waste Reports 
-        <button onclick="logoutUser()" id="logoutuser">Logout</button>
-    </h1>
-      <div class="header-actions">
-        <div class="filter-controls">
-          <select id="wasteTypeFilter">
-            <option value="all">All Types</option>
-            <option value="plastic">Plastic</option>
-            <option value="paper">Paper</option>
-            <option value="metal">Metal</option>
-            <option value="glass">Glass</option>
-            <option value="organic">Organic</option>
-          </select>
-          <button id="refreshBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
+    <div class="dashboard-wrapper">
+        <header class="dashboard-header">
+            <div class="header-title">
+                <h1><i class="fa-solid fa-solar-panel"></i> Energy Production Dashboard</h1>
+                <span id="vendorName" class="vendor-name">Loading...</span>
+            </div>
+            <div class="header-actions">
+                <button id="refreshBtn" class="header-btn" title="Refresh Data"><i
+                        class="fa-solid fa-sync-alt"></i></button>
+                <button id="logoutBtn" class="header-btn logout" title="Logout"><i
+                        class="fa-solid fa-right-from-bracket"></i></button>
+            </div>
+        </header>
+
+        <main class="dashboard-content">
+            <!-- Stats -->
+            <section class="stats-container">
+                <div class="stat-card">
+                    <i class="fa-solid fa-leaf"></i>
+                    <div class="stat-info">
+                        <div class="stat-value" id="totalCo2Reduced">0 kg</div>
+                        <div class="stat-label">CO₂ Reduced</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fa-solid fa-bolt"></i>
+                    <div class="stat-info">
+                        <div class="stat-value" id="totalEnergyProduced">0 kWh</div>
+                        <div class="stat-label">Energy Produced</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fa-solid fa-recycle"></i>
+                    <div class="stat-info">
+                        <div class="stat-value" id="totalWasteProcessed">0 kg</div>
+                        <div class="stat-label">Waste Processed</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fa-solid fa-cubes-stacked"></i>
+                    <div class="stat-info">
+                        <div class="stat-value" id="totalAvailableBins">0</div>
+                        <div class="stat-label">Bins Available</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Main Grid -->
+            <div class="content-grid">
+                <section class="bins-section">
+                    <div class="section-header">
+                        <h2><i class="fa-solid fa-magnifying-glass"></i> Available Bins for Collection</h2>
+                        <select id="wasteTypeFilter">
+                            <option value="all">All Waste Types</option>
+                        </select>
+                    </div>
+                    <div class="action-bar">
+                        <button id="selectAllBtn">Select All</button>
+                        <button id="requestSelectedBtn" disabled><i class="fa-solid fa-truck-fast"></i> Request Selected
+                            (<span id="selectedCount">0</span>)</button>
+                    </div>
+                    <div class="bins-grid" id="binsGrid">
+                        <!-- Bins will be loaded here -->
+                    </div>
+                </section>
+
+                <div class="right-column">
+                    <section class="awaiting-processing-section">
+                        <h2><i class="fa-solid fa-clock"></i> Awaiting Processing</h2>
+                        <div class="processing-list" id="awaitingProcessingList"></div>
+                    </section>
+
+                    <section class="requested-deliveries-section">
+                        <h2><i class="fa-solid fa-truck-arrow-right"></i> Requested Deliveries</h2>
+                        <div class="delivery-list" id="requestedDeliveriesList"></div>
+                    </section>
+
+                    <section class="processed-deliveries-section">
+                        <h2><i class="fa-solid fa-check-circle"></i> Processed Deliveries</h2>
+                        <div class="delivery-list" id="processedDeliveriesList"></div>
+                    </section>
+
+                    <section class="chart-section">
+                        <h2><i class="fa-solid fa-chart-pie"></i> Waste Processed by Type</h2>
+                        <div class="chart-container">
+                            <canvas id="wasteTypeChart"></canvas>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Bin Details Modal -->
+    <div class="overlay" id="detailsOverlay">
+        <div class="modal">
+            <button class="close-modal" id="closeDetailsModal">&times;</button>
+            <div id="detailsModalContent">
+                <!-- Content injected by JS -->
+            </div>
         </div>
-      </div>
-    </header>
-
-    <div class="stats-bar">
-      <div class="stat-card">
-        <div class="stat-value" id="totalReports">1</div>
-        <div class="stat-label">Total Available</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" id="selectedCount">0</div>
-        <div class="stat-label">Selected Items</div>
-      </div>
     </div>
 
-    <main class="waste-reports-container">
-      <div class="waste-reports-grid" id="reportsGrid">
-        <!-- Reports will be loaded here -->
-      </div>
-    </main>
-
-    <div class="action-bar">
-      <button id="selectAllBtn"><i class="fas fa-check-square"></i> Select All</button>
-      <button id="collectSelectedBtn" disabled><i class="fas fa-truck"></i> Collect Selected</button>
+    <!-- Mark Processed Modal -->
+    <div class="overlay" id="processOverlay">
+        <div class="modal process-modal">
+            <button class="close-modal" id="closeProcessModal">&times;</button>
+            <h2>Finalize Processing</h2>
+            <form id="processForm">
+                <p>Enter the final metrics for Request ID: <strong id="processRequestId"></strong></p>
+                <div class="form-group">
+                    <label for="energyGenerated">Energy Generated (kWh)</label>
+                    <input type="number" id="energyGenerated" required step="0.1" placeholder="e.g., 150.5">
+                </div>
+                <div class="form-group">
+                    <label for="co2Reduced">CO₂ Reduced (kg)</label>
+                    <input type="number" id="co2Reduced" required step="0.1" placeholder="e.g., 25.2">
+                </div>
+                <div class="form-group">
+                    <label for="processingMethod">Processing Method</label>
+                    <input type="text" id="processingMethod" required placeholder="e.g., Pyrolysis, Recycling">
+                </div>
+                <button type="submit" class="modal-btn btn-confirm"><i class="fa-solid fa-check-double"></i> Confirm &
+                    Complete</button>
+            </form>
+        </div>
     </div>
-  </div>
 
-  <script src="vendor-script.js"></script>
+    <div id="snackbar"></div>
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+
+    <script src="/public/JS/vendor.dashboard.js"></script>
 </body>
 
-<script src="/public/JS/vendor.dashboard.js">
- 
-</script>
 </html>

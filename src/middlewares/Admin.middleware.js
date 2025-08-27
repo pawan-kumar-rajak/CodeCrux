@@ -1,9 +1,9 @@
 import {ApiError} from "../utils/ApiError.js" 
 import { Admin } from "../models/admin.model.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
+
 
 // Middleware to check if the user is an admin
-export const isAdmin = asyncHandler( async (req, res, next) => {
+export const isAdmin = async (req, res, next) => {
   const user = req.user; // Assuming `req.user` is populated by JWT middleware with user data
 
   if (!user) {
@@ -23,6 +23,6 @@ export const isAdmin = asyncHandler( async (req, res, next) => {
   } catch (error) {
     return next(new ApiError(500, 'Internal server error while checking admin status.'));
   }
-});
+}
 
 

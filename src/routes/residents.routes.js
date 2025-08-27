@@ -14,7 +14,9 @@ import {
 
 	reportWaste,
 	getResidentDashboard,
-getMyWasteReports
+	getMyWasteReports,
+	getWasteDetails,
+	deleteWasteReport 
 } from "../controllers/residents.controller.js";
 import { MultiUpload, upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/Auth.middleware.js";
@@ -32,8 +34,10 @@ router.post("/change_current_password", verifyJWT, changeCurrentPassword);
 router.get("/current_user", verifyJWT, getCurrentUser);
 router.post("/update_account_details", verifyJWT, updateAccountDetails);
 router.post("/update_user_avatar", verifyJWT, upload.single("avatar"), updateUserAvatar);
-router.post("/submit_waste_report", verifyJWT,MultiUpload, reportWaste);
-router.get("/get_resident_dashboard", verifyJWT, getResidentDashboard);
-router.get("/get_waste_history", verifyJWT, getMyWasteReports);
+router.post("/report-waste", verifyJWT, MultiUpload, reportWaste);
+router.get("/dashboard", verifyJWT, getResidentDashboard);
+router.get("/waste-history", verifyJWT, getMyWasteReports);
+router.get("/waste-details/:wasteId", verifyJWT, getWasteDetails);
+router.delete("/delete-report/:reportId", verifyJWT, deleteWasteReport);
 	
 export default router;

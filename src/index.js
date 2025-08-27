@@ -68,7 +68,8 @@ connectDB()
   .then(() => {
     const PORT = 5000|| 8001; // Correct port assignment
     app.listen(PORT, () => {
-      console.log(`Server is running at port: ${PORT}`); // Fixed typo
+      console.log(`Server is running at port: ${PORT}`); 
+      console.log(`Server is running at address: http://127.0.0.1:${PORT}`); 
     });
   })
   .catch((err) => {

@@ -46,6 +46,6 @@ router.post("/create-bin",verifyJWT,createBin);
 router.get("/report-details/:reportId", verifyJWT, getReportDetails);
 router.get("/get_all_residents", verifyJWT, getAllResidents);
 router.get("/get_all_vendors", verifyJWT, getAllVendors);
-router.get('/get-environmental-impact',verifyJWT,getEnvironmentalImpactStats)
+router.get('/get-environmental-impact',getEnvironmentalImpactStats)
 
 export default router;

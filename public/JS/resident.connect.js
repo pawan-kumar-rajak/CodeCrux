@@ -100,7 +100,9 @@ document.getElementById('login-form').addEventListener('submit', async (event) =
                 apiEndpoint = '/api/v1/collector/login';
                 break;
             default:
-                throw new Error('Invalid user type');
+                return next( new ApiError('Invalid user type'));
+
+
         }
 
         const response = await fetch(`http://localhost:5000${apiEndpoint}`, {
@@ -115,7 +117,9 @@ document.getElementById('login-form').addEventListener('submit', async (event) =
         const data = await response.json();
 
         if (!response.ok) {
-            throw new Error(data.message || 'Login failed');
+            return next( new ApiError(data.message || 'Login failed'));
+
+
         }
 
         // Login successful - redirect based on user type
@@ -183,7 +187,9 @@ async function submitWasteReport(reportData) {
   const accessToken = getCookie('accessToken');
   if (!accessToken) {
     showSnackbar('Please login to submit waste reports.', 'error');
-    throw new Error('Not authenticated');
+    return next( new ApiError('Not authenticated'));
+
+
   }
 
   try {
@@ -205,7 +211,9 @@ async function submitWasteReport(reportData) {
     } else {
       const errorMessage = responseData.message || 'Failed to submit waste report.';
       showSnackbar(errorMessage, 'error');
-      throw new Error(errorMessage);
+      return next( new ApiError(errorMessage));
+
+
     }
   } catch (error) {
     console.error('Error submitting waste report:', error);
@@ -218,7 +226,9 @@ async function getResidentDashboard() {
   const accessToken = getCookie('accessToken');
   if (!accessToken) {
     showSnackbar('Please login to view dashboard.', 'error');
-    throw new Error('Not authenticated');
+    return next( new ApiError('Not authenticated'));
+
+
   }
 
   try {
@@ -237,7 +247,9 @@ async function getResidentDashboard() {
     } else {
       const errorMessage = responseData.message || 'Failed to fetch dashboard data.';
       showSnackbar(errorMessage, 'error');
-      throw new Error(errorMessage);
+      return next( new ApiError(errorMessage));
+
+
     }
   } catch (error) {
     console.error('Error fetching dashboard:', error);

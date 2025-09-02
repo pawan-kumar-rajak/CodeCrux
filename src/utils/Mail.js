@@ -442,7 +442,8 @@ const sendOrderDetailsToArtisan = async (artisan, order) => {
   const product = await Product.findById(productId);
 
   if (!product) {
-    throw new ApiError(404, "Product not found for email generation");
+    return next( new ApiError(404, "Product not found for email generation"));
+
   }
 
   // Email content
@@ -584,7 +585,8 @@ const sendCancellationDetailsToArtisan = async (artisan, order) => {
   const product = await Product.findById(productId);
 
   if (!product) {
-    throw new ApiError(404, "Product not found for email generation");
+    return next( new ApiError(404, "Product not found for email generation"));
+
   }
   const totalPrice = product.sellerPrice * quantity;
 

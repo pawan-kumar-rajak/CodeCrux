@@ -143,15 +143,17 @@
 
                 <div class="stats-preview">
                     <div class="stat-item">
-                        <div class="stat-number">1,000+</div>
-                        <div class="stat-label">Active Users</div>
+                        <div class="stat-number" id="co2-reduced">1,000+</div>
+                        <div class="stat-label">CO₂ emissions reduced through waste-to-energy conversion</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-number">5,000 kg</div>
+                        <div class="stat-number"  id="waste-processed">5,000 kg</div>
+                        <!-- <div class="impact-number" id="co2-reduced">0 kg</div> -->
+
                         <div class="stat-label">Waste Processed</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-number">2,500 kWh</div>
+                        <div class="stat-number" id="energy-generated">2,500 kWh</div>
                         <div class="stat-label">Energy Generated</div>
                     </div>
                 </div>
@@ -163,6 +165,43 @@
     <div id="messageContainer" class="message-container"></div>
 
     <script src="/public/JS/login.js"></script>
+    <script>
+
+        async function loadImpactData() {
+    try {
+        const response = await fetch('http://localhost:5000/api/v1/admin/get-environmental-impact');
+        
+        if (!response.ok) {
+            return next( new ApiError('Failed to fetch impact data'));
+
+
+        }
+        
+        const data = await response.json();
+        updateImpactStats(data.data);
+        
+    } catch (error) {
+        console.error('Error loading impact data:', error);
+        // Fallback to default values if API fails
+        updateImpactStats({
+            overall: {
+                totalEnergyGenerated: 2500,
+                totalCo2Reduced: 1200,
+                totalReportsProcessed: 1000
+            }
+        });
+    }
+}
+
+// Function to update the impact stats display
+function updateImpactStats(impactData) {
+    document.getElementById('co2-reduced').textContent = `${impactData.overall.totalCo2Reduced.toLocaleString()} kg`;
+    document.getElementById('energy-generated').textContent = `${impactData.overall.totalEnergyGenerated.toLocaleString()} kWh`;
+    document.getElementById('waste-processed').textContent = `${(impactData.overall.totalWeightReduced ).toLocaleString()} kg`; // Assuming 2kg waste per kWh
+    // document.getElementById('reports-processed').textContent = impactData.overall.totalReportsProcessed.toLocaleString();
+}
+    loadImpactData();
+    </script>
 </body>
 
 </html>

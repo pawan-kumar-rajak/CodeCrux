@@ -76,7 +76,9 @@ async function loadAdminProfile() {
         });
 
         if (!response.ok) {
-            throw new Error('Failed to fetch admin profile');
+            return next( new ApiError('Failed to fetch admin profile'));
+
+
         }
 
         const data = await response.json();
@@ -99,7 +101,9 @@ async function loadAdminProfile() {
 //         });
 
 //         if (!response.ok) {
-//             throw new Error('Failed to fetch dashboard stats');
+//             return next( new ApiError('Failed to fetch dashboard stats'));
+
+
 //         }
 
 //         const data = await response.json();
@@ -131,7 +135,9 @@ async function loadDashboardStats() {
         });
 
         if (!statsResponse.ok) {
-            throw new Error('Failed to fetch dashboard stats');
+            return next( new ApiError('Failed to fetch dashboard stats'));
+
+
         }
 
         const statsData = await statsResponse.json();
@@ -150,7 +156,9 @@ async function loadDashboardStats() {
         });
 
         if (!impactResponse.ok) {
-            throw new Error('Failed to fetch environmental impact data');
+            return next( new ApiError('Failed to fetch environmental impact data'));
+
+
         }
 
         const impactData = await impactResponse.json();
@@ -248,7 +256,9 @@ async function loadPendingReports() {
         });
 
         if (!response.ok) {
-            throw new Error('Failed to fetch pending reports');
+            return next( new ApiError('Failed to fetch pending reports'));
+
+
         }
 
         const data = await response.json();
@@ -517,7 +527,9 @@ async function approveReport() {
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to approve report');
+            return next( new ApiError(errorData.message || 'Failed to approve report'));
+
+
         }
 
         showSnackbar('Report approved successfully!', 'success');
@@ -549,7 +561,9 @@ async function rejectReport() {
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to reject report');
+            return next( new ApiError(errorData.message || 'Failed to reject report'));
+
+
         }
 
         showSnackbar('Report rejected and assigned to collector!', 'success');
@@ -575,13 +589,17 @@ async function viewReportDetails(reportId) {
 
         
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            return next( new ApiError(`HTTP error! status: ${response.status}`));
+
+
         }
 
         const result = await response.json();
         
         if (!result.success || !result.data) {
-            throw new Error(result.message || 'Invalid response data');
+            return next( new ApiError(result.message || 'Invalid response data'));
+
+
         }
 
         populateGarbageDetailsOverlay(result.data);
@@ -679,7 +697,9 @@ async function loadCollectors() {
         });
         
         if (!response.ok) {
-            throw new Error('Failed to fetch collectors');
+            return next( new ApiError('Failed to fetch collectors'));
+
+
         }
         
         const { data } = await response.json();
@@ -752,12 +772,16 @@ async function viewCollectorDetails(collectorId) {
         });
         
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            return next( new ApiError(`HTTP error! status: ${response.status}`));
+
+
         }
         
         const result = await response.json();
         if (!result.success || !result.data) {
-            throw new Error(result.message || 'Invalid response data');
+            return next( new ApiError(result.message || 'Invalid response data'));
+
+
         }
 
         populateCollectorOverlay(result.data);
@@ -843,7 +867,9 @@ async function loadUsers() {
         });
         
         if (!response.ok) {
-            throw new Error('Failed to fetch users');
+            return next( new ApiError('Failed to fetch users'));
+
+
         }
         
         const { data } = await response.json();
@@ -912,7 +938,9 @@ async function loadVendors() {
         });
         
         if (!response.ok) {
-            throw new Error('Failed to fetch vendors');
+            return next( new ApiError('Failed to fetch vendors'));
+
+
         }
         
         const { data } = await response.json();
@@ -986,12 +1014,16 @@ async function viewVendorDetails(VendorId) {
         });
         
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            return next( new ApiError(`HTTP error! status: ${response.status}`));
+
+
         }
         
         const result = await response.json();
         if (!result.success || !result.data) {
-            throw new Error(result.message || 'Invalid response data');
+            return next( new ApiError(result.message || 'Invalid response data'));
+
+
         }
 
         populateVendorOverlay(result.data);
@@ -1091,7 +1123,9 @@ async function logoutUser() {
             setTimeout(() => { window.location.href = '/resident/login'; }, 1000); // Redirect to login
         } else {
             const errorData = await response.json();
-            throw new Error(errorData.message || 'Logout failed');
+            return next( new ApiError(errorData.message || 'Logout failed'));
+
+
         }
     } catch (error) {
         console.error('Logout error:', error);

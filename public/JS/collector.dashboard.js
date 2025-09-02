@@ -83,7 +83,9 @@
 //         });
 
 //         if (!response.ok) {
-//             throw new Error('Failed to fetch collector profile');
+//             return next( new ApiError('Failed to fetch collector profile'));
+
+
 //         }
 
 //         const data = await response.json();
@@ -212,7 +214,9 @@
 //         credentials: 'include'
 //     });
 //     if (!response.ok) {
-//         throw new Error('Failed to fetch dashboard data');
+//         return next( new ApiError('Failed to fetch dashboard data'));
+
+
 //     }
 //     const { data } = await response.json();
 //     return data;
@@ -224,7 +228,9 @@
 //         credentials: 'include'
 //     });
 //     if (!response.ok) {
-//         throw new Error('Failed to fetch assigned pickups');
+//         return next( new ApiError('Failed to fetch assigned pickups'));
+
+
 //     }
 //     const { data } = await response.json();
 //     return data;
@@ -239,7 +245,9 @@
 //             credentials: 'include'
 //         });
 //         if (!response.ok) {
-//             throw new Error('Failed to fetch collection history');
+//             return next( new ApiError('Failed to fetch collection history'));
+
+
 //         }
 //         const { data } = await response.json();
 //         populateCollectionHistoryTable(data);
@@ -513,12 +521,16 @@
 //         });
 
 //         if (!response.ok) {
-//             throw new Error('Failed to fetch waste details');
+//             return next( new ApiError('Failed to fetch waste details'));
+
+
 //         }
 
 //         const data = await response.json();
 //         if (!data.success || !data.data) {
-//             throw new Error(data.message || 'Invalid response data');
+//             return next( new ApiError(data.message || 'Invalid response data'));
+
+
 //         }
 //         currentWasteDetails = data.data; // Store fetched data globally
 
@@ -709,7 +721,9 @@
 //         } else if (newStatus === 'delivered') {
 //             apiEndpoint = 'mark_as_delivered';
 //         } else {
-//             throw new Error('Invalid status update request.');
+//             return next( new ApiError('Invalid status update request.'));
+
+
 //         }
 
 //         const response = await fetch(`http://localhost:5000/api/v1/collector/${apiEndpoint}`, {
@@ -724,7 +738,9 @@
 
 //         if (!response.ok) {
 //             const errorData = await response.json();
-//             throw new Error(errorData.message || `Failed to mark as ${newStatus}`);
+//             return next( new ApiError(errorData.message || `Failed to mark as ${newStatus}`));
+
+
 //         }
 
 //         showSnackbar(`Waste marked as ${newStatus} successfully!`, 'success');
@@ -809,7 +825,9 @@
 //             setTimeout(() => { window.location.href = '/resident/login'; }, 1000); // Redirect to login
 //         } else {
 //             const errorData = await response.json();
-//             throw new Error(errorData.message || 'Logout failed');
+//             return next( new ApiError(errorData.message || 'Logout failed'));
+
+
 //         }
 //     } catch (error) {
 //         console.error('Logout error:', error);
@@ -908,12 +926,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     if (!response.ok) {
-        throw new Error(`HTTP error ${response.status}: Failed to fetch ${url}`);
+        return next( new ApiError(`HTTP error ${response.status}: Failed to fetch ${url}`));
+
+
     }
 
     const result = await response.json();
     if (!result.success) {
-        throw new Error(result.message || `API error for ${url}`);
+        return next( new ApiError(result.message || `API error for ${url}`));
+
+
     }
 
     return result.data;

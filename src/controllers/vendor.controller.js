@@ -21,10 +21,10 @@ const generateAccessAndRefereshTokens = async (userId) => {
 
         return { accessToken, refreshToken };
     } catch (error) {
-        throw new ApiError(
-            500,
+        return next( new ApiError(            500,
             "Something went wrong while generating referesh and access token"
-        );
+        ));
+
     }
 };
 
@@ -141,13 +141,15 @@ const loginUser = async (req, res, next) => {
     const { email, password } = req.body; 
     
     if (!email || !password) {
-        throw new ApiError(400, "Email and password are required");
+        return next( new ApiError(400, "Email and password are required"));
+
     }
 
     const user = await User.findOne({ email });
 
     if (!user) {
-        throw new ApiError(404, "Vendor does not exist");
+        return next( new ApiError(404, "Vendor does not exist"));
+
     }
 
     const isPasswordValid = await user.isPasswordCorrect(password);
@@ -216,7 +218,8 @@ const refreshAccessToken =
             req.cookies.refreshToken || req.body.refreshToken;
 
         if (!incomingRefreshToken) {
-            throw new ApiError(401, "unauthorized request");
+            return next( new ApiError(401, "unauthorized request"));
+
         }
 
         try {
@@ -228,14 +231,15 @@ const refreshAccessToken =
             const user = await User.findById(decodedToken?._id);
 
             if (!user) {
-                throw new ApiError(401, "Invalid refresh token");
+                return next( new ApiError(401, "Invalid refresh token"));
+
             }
 
             if (incomingRefreshToken !== user?.refreshToken) {
-                throw new ApiError(
-                    401,
+                return next( new ApiError(                    401,
                     "Refresh token is expired or used"
-                );
+                ));
+
             }
 
             const options = {
@@ -258,10 +262,10 @@ const refreshAccessToken =
                     )
                 );
         } catch (error) {
-            throw new ApiError(
-                401,
+            return next( new ApiError(                401,
                 error?.message || "Invalid refresh token"
-            );
+            ));
+
         }
     }
 

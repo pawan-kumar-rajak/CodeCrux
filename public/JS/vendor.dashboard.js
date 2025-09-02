@@ -100,8 +100,12 @@ document.addEventListener('DOMContentLoaded', () => {
     async function fetchData(url, options = {}) {
         const response = await fetch(url, { credentials: 'include', ...options });
         const result = await response.json();
-        if (!response.ok) throw new Error(result.message || `HTTP error ${response.status}`);
-        if (!result.success) throw new Error(result.message || 'API error');
+        if (!response.ok) return next( new ApiError(result.message || `HTTP error ${response.status}`));
+
+
+        if (!result.success) return next( new ApiError(result.message || 'API error'));
+
+
         return result.data;
     }
 

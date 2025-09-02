@@ -54,7 +54,9 @@ const adminSchema = new Schema(
           );
       } catch (error) {
           console.error('Error generating access token:', error);
-          throw new Error('Could not generate access token');
+          return next( new ApiError('Could not generate access token'));
+
+
       }
   };
   
@@ -71,7 +73,9 @@ const adminSchema = new Schema(
           );
       } catch (error) {
           console.error('Error generating refresh token:', error);
-          throw new Error('Could not generate refresh token');
+          return next( new ApiError('Could not generate refresh token'));
+
+
       }
   };
   

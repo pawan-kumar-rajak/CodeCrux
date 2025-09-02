@@ -41,7 +41,8 @@
 //             } else if (error.request) {
 //                 console.error('ML Service No Response Received:', error.request);
 //             }
-//             throw new ApiError(500, 'Failed to process waste image with ML service. ' + (error.response?.data?.error || error.message));
+//             return next( new ApiError(500, 'Failed to process waste image with ML service. ' + (error.response?.data?.error || error.message)));
+
 //         }
 //     },
 
@@ -108,10 +109,10 @@ export const mlService = {
             } else if (error.request) {
                 console.error('ML Service No Response Received:', error.request);
             }
-            throw new ApiError(
-                500,
+            return next( new ApiError(                500,
                 'Failed to process waste image with external ML service. ' + (error.response?.data?.error || error.message)
-            );
+            ));
+
         }
     },
 

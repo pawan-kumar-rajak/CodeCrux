@@ -71,11 +71,15 @@ const deleteImageFromCloudinary = async (cloudinaryId) => {
         
         // If result is an error, it will be thrown here, you can handle that accordingly
         if (result.result !== 'ok') {
-            throw new Error('Failed to delete image from Cloudinary');
+            return next( new ApiError('Failed to delete image from Cloudinary'));
+
+
         }
     } catch (error) {
         console.error('Error deleting image from Cloudinary:', error);
-        throw new Error('Cloudinary image deletion failed');
+        return next( new ApiError('Cloudinary image deletion failed'));
+
+
     }
 };
 

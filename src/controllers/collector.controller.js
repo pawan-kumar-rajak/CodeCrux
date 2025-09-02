@@ -22,10 +22,10 @@ const generateAccessAndRefereshTokens = async (userId) => {
 
         return { accessToken, refreshToken };
     } catch (error) {
-        throw new ApiError(
-            500,
+        return next( new ApiError(            500,
             "Something went wrong while generating referesh and access token"
-        );
+        ));
+
     }
 };
 
@@ -202,10 +202,10 @@ const refreshAccessToken =
             }
 
             if (incomingRefreshToken !== user?.refreshToken) {
-                throw new ApiError(
-                    401,
+                return next( new ApiError(                    401,
                     "Refresh token is expired or used"
-                );
+                ));
+
             }
 
             const options = {
@@ -228,10 +228,10 @@ const refreshAccessToken =
                     )
                 );
         } catch (error) {
-            throw new ApiError(
-                401,
+            return next( new ApiError(                401,
                 error?.message || "Invalid refresh token"
-            );
+            ));
+
         }
     }
 

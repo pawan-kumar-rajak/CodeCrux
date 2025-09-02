@@ -33,10 +33,10 @@ const generateAccessAndRefereshTokens = async (userId) => {
 
 		return { accessToken, refreshToken };
 	} catch (error) {
-		throw new ApiError(
-			500,
+		return next( new ApiError(			500,
 			"Something went wrong while generating referesh and access token"
-		);
+		));
+
 	}
 };
 
@@ -50,7 +50,8 @@ const send_registrer_Otp = async (req, res, next) => {
 
 	const existedUser = await User.findOne({ email });
 	if (existedUser) {
-		throw new ApiError(409, 'User already existed ');
+		return next( new ApiError(409, 'User already existed '));
+
 	}
 
 	const otp = Math.random()
@@ -275,10 +276,10 @@ const loginUser = async (req, res, next) => {
 	const { email, username, password } = req.body;
 
 	if (!(username || email)) {
-		throw new ApiError(
-			400,
+		return next( new ApiError(			400,
 			"username or email is required"
-		);
+		));
+
 	}
 
 	const user = await User.findOne({ email: email });
@@ -353,7 +354,8 @@ const refreshAccessToken =
 			req.cookies.refreshToken || req.body.refreshToken;
 
 		if (!incomingRefreshToken) {
-			throw new ApiError(401, "unauthorized request");
+			return next( new ApiError(401, "unauthorized request"));
+
 		}
 
 		try {
@@ -365,14 +367,15 @@ const refreshAccessToken =
 			const user = await User.findById(decodedToken?._id);
 
 			if (!user) {
-				throw new ApiError(401, "Invalid refresh token");
+				return next( new ApiError(401, "Invalid refresh token"));
+
 			}
 
 			if (incomingRefreshToken !== user?.refreshToken) {
-				throw new ApiError(
-					401,
+				return next( new ApiError(					401,
 					"Refresh token is expired or used"
-				);
+				));
+
 			}
 
 			const options = {
@@ -395,10 +398,10 @@ const refreshAccessToken =
 					)
 				);
 		} catch (error) {
-			throw new ApiError(
-				401,
+			return next( new ApiError(				401,
 				error?.message || "Invalid refresh token"
-			);
+			));
+
 		}
 	}
 
@@ -412,7 +415,8 @@ const changeCurrentPassword =
 		);
 
 		if (!isPasswordCorrect) {
-			throw new ApiError(400, "Invalid old password");
+			return next( new ApiError(400, "Invalid old password"));
+
 		}
 
 		user.password = newPassword;
@@ -757,10 +761,12 @@ const deleteWasteReport = async (req, res, next) => {
         // Step 1: Find the report and verify the user is the owner.
         const report = await WasteReport.findById(reportId).session(session);
         if (!report) {
-            throw new ApiError(404, "Waste report not found.");
+            return next( new ApiError(404, "Waste report not found."));
+
         }
         if (report.reportedBy.toString() !== residentId.toString()) {
-            throw new ApiError(403, "You are not authorized to delete this report.");
+            return next( new ApiError(403, "You are not authorized to delete this report."));
+
         }
 
         // Step 2: Check if the report is in a deletable state.
@@ -777,7 +783,8 @@ const deleteWasteReport = async (req, res, next) => {
             }).session(session);
 
             if (activeRequest) {
-                throw new ApiError(400, "Cannot delete report. A collector is already on the way for this bin.");
+                return next( new ApiError(400, "Cannot delete report. A collector is already on the way for this bin."));
+
             }
         }
 

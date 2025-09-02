@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Help Center - EcoChain</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.7;
+            color: #333;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 40px;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #FFC107;
+            font-size: 2.5rem;
+            margin: 0;
+        }
+        .header p {
+            color: #6c757d;
+            margin-top: 8px;
+        }
+        h2 {
+            color: #1a1a1a;
+            font-size: 1.5rem;
+            margin-top: 40px;
+        }
+        .faq-item {
+            border-bottom: 1px solid #e9ecef;
+            padding: 15px 0;
+        }
+        .faq-item summary {
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1.1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .faq-item summary::after {
+            content: '+';
+            font-size: 1.5rem;
+            transition: transform 0.2s;
+        }
+        .faq-item[open] summary::after {
+            transform: rotate(45deg);
+        }
+        .faq-item .answer {
+            padding: 15px 5px;
+            color: #555;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Help Center</h1>
+            <p>Frequently Asked Questions (FAQ)</p>
+        </div>
+
+        <h2>For Residents</h2>
+        <details class="faq-item">
+            <summary>How do I report waste?</summary>
+            <div class="answer">
+                <p>From your dashboard, click the "Report Waste" button. Fill in the details about the waste type and weight, capture your location, and upload at least one clear photo of the waste. Our AI will analyze the image to help classify it.</p>
+            </div>
+        </details>
+        <details class="faq-item">
+            <summary>How does the reward system work?</summary>
+            <div class="answer">
+                <p>You receive a small, instant reward of 10 points for every valid report you submit. You will receive a much larger "Impact Bonus" after the waste is collected and successfully processed by one of our partner vendors. The bonus amount depends on the energy generated or CO2 reduced.</p>
+            </div>
+        </details>
+        <details class="faq-item">
+            <summary>Can I cancel a waste report?</summary>
+            <div class="answer">
+                <p>Yes, you can cancel a report from your dashboard as long as a collector has not been dispatched for pickup (i.e., its status is not "awaiting_collection" or later). This ensures our collectors' time is not wasted.</p>
+            </div>
+        </details>
+
+        <h2>For Collectors</h2>
+        <details class="faq-item">
+            <summary>How do I see my assigned pickups?</summary>
+            <div class="answer">
+                <p>All your assigned pickups are listed in the "Task List" on your dashboard. You can also see them plotted on the interactive map. New tasks will appear automatically as they are assigned to you.</p>
+            </div>
+        </details>
+        <details class="faq-item">
+            <summary>How do I update the status of a pickup?</summary>
+            <div class="answer">
+                <p>Click on a task to open its details. When you are at the bin's location, you can click "Mark Collected". After you have transported the waste to the vendor's facility, open the details again and click "Mark Delivered".</p>
+            </div>
+        </details>
+
+        <h2>For Vendors</h2>
+        <details class="faq-item">
+            <summary>How do I find waste to process?</summary>
+            <div class="answer">
+                <p>On your dashboard, the "Available Bins" section shows all nearby smart bins that have reached a high fill level and contain waste types you specialize in. You can filter this list to find the materials you need.</p>
+            </div>
+        </details>
+        <details class="faq-item">
+            <summary>What happens after I request a bin?</summary>
+            <div class="answer">
+                <p>Once you request a bin, our system automatically assigns the closest available collector to pick it up and deliver it to your facility. You can track the status of this request on your dashboard.</p>
+            </div>
+        </details>
+
+        <div class="footer">
+            &copy; 2025 EcoChain. All Rights Reserved.
+        </div>
+    </div>
+</body>
+</html>

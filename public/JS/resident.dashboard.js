@@ -266,7 +266,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (!response.ok) {
                 const errorText = await response.text();
-                throw new Error(`Backend API request failed with status ${response.status}: ${errorText}`);
+                return next( new ApiError(`Backend API request failed with status ${response.status}: ${errorText}`));
+
+
             }
 
             const result = await response.json();
@@ -599,7 +601,9 @@ async function fetchCurrentUser() {
         });
 
         if (!response.ok) {
-            throw new Error('Failed to fetch user data');
+            return next( new ApiError('Failed to fetch user data'));
+
+
         }
 
         const data = await response.json();
@@ -643,7 +647,9 @@ async function fetchDashboardData() {
                 showLoginPage();
                 return;
             }
-            throw new Error('Failed to fetch dashboard data');
+            return next( new ApiError('Failed to fetch dashboard data'));
+
+
         }
 
         const data = await response.json();
@@ -716,7 +722,9 @@ async function deleteReport(reportId, event) {
         });
 
         if (!response.ok) {
-            throw new Error('Failed to delete report');
+            return next( new ApiError('Failed to delete report'));
+
+
         }
 
         const result = await response.json();
@@ -742,7 +750,9 @@ async function showWasteDetails(wasteId) {
         });
 
         if (!response.ok) {
-            throw new Error('Failed to fetch waste details');
+            return next( new ApiError('Failed to fetch waste details'));
+
+
         }
 
         const data = await response.json();

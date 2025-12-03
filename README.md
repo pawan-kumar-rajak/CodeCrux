@@ -521,13 +521,13 @@ We welcome contributions! Here's how to get involved:
 **Join our community:** [EcoChain Discord Server](https://discord.gg/ecochain)  
 
 ---
-## 🤝 Contributors
+<!-- ## 🤝 Contributors
 - [Yashansh Raj Pandey (Project Lead)](https://github.com/yashanshhhraj)
 - [Gajendra Singh Thakur (ML Engineer)](https://github.com/Gajendra-dev-ux)
 - [Pawan Kumar Rajak (Fullstack Developer)](https://github.com/pawan-kumar-rajak)
 - [Himanshu Dhepe (Management and requirement gathering)](https://github.com/himanshu1hd)
 
----
+--- -->
 
 ## 📜 License  
 EcoChain is released under the [MIT License](LICENSE.md) - free for educational and non-commercial use. For commercial applications, please contact our team.  

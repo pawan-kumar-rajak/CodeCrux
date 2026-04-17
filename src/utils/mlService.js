@@ -7,7 +7,8 @@ import { ApiError } from './ApiError.js';
 import path from 'path';
 
 // This URL must point to your running Python Flask ML service
-const ML_SERVICE_URL = process.env.ML_SERVICE_URL;
+// const ML_SERVICE_URL = process.env.ML_SERVICE_URL;
+const ML_SERVICE_URL = 'http://localhost:3000'; // Example URL for local testing
 
 export const mlService = {
     /**
@@ -51,9 +52,9 @@ export const mlService = {
             } else if (error.request) {
                 console.error('ML Service No Response Received:', error.request);
             }
-            return next( new ApiError(                500,
+            new ApiError(500,
                 'Failed to process waste image with external ML service. ' + (error.response?.data?.error || error.message)
-            ));
+            )
 
         }
     },

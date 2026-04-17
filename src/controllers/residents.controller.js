@@ -565,6 +565,7 @@ const reportWaste = async (req, res, next) => {
 
 			if (!mlResponseData.success) {
 				console.warn('External ML Service reported failure:', mlResponseData.message || 'Unknown ML error');
+				return next(new ApiError(500, "No reponse recieved from ML server"))
 			}
 		} catch (mlError) {
 			console.error('External ML Service Processing Error:', mlError.message);

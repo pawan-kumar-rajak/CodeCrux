@@ -20,6 +20,8 @@ app = Flask(__name__)
 CORS(app, origins=["http://localhost:5000", "http://localhost:3000"], 
      supports_credentials=True, methods=['GET', 'POST', 'OPTIONS'])
 
+
+
 # Configuration
 app.config["UPLOAD_FOLDER"] = "uploads"
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB max file size
@@ -110,6 +112,8 @@ waste_classification = {
 # --- Flask Routes ---
 @app.route("/detect", methods=["POST", "OPTIONS"])
 def detect_waste():
+
+
     if request.method == "OPTIONS":
         return jsonify({"message": "OK"}), 200
     
@@ -154,6 +158,8 @@ def detect_waste():
     try:
         # Perform YOLO detection
         results = model(image_path, conf=0.25, verbose=False)
+
+        print("Model Results:", results)
         
         max_confidence = 0
         detected_class = None
@@ -177,6 +183,7 @@ def detect_waste():
                         'bbox': [x1, y1, x2, y2]
                     }
                     all_detections.append(detection_info)
+                    print("all detections:", all_detections)
                     
                     if confidence > max_confidence:
                         max_confidence = confidence
@@ -270,6 +277,19 @@ def get_classes():
         "waste_classification": waste_classification
     })
 
+@app.route("/", methods=["GET"])
+def index():
+    return jsonify({
+        "message": "Welcome to the Waste Detection ML Service",
+        "endpoints": {
+            "/detect": "POST - Upload an image for waste detection",
+            "/health": "GET - Health check endpoint",
+            "/classes": "GET - Get available waste classes"
+        },
+        "version": "2.0.0"
+    })  
+
+
 # Error handlers
 @app.errorhandler(413)
 def too_large(e):
@@ -283,6 +303,8 @@ def not_found(e):
 def internal_error(e):
     logger.error(f"Internal server error: {e}")
     return jsonify({"error": "Internal server error", "success": False}), 500
+
+
 
 if __name__ == "__main__":
     logger.info("Starting Waste Detection ML Service...")

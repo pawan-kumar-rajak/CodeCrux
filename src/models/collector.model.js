@@ -1,6 +1,7 @@
 import { Schema,mongoose } from "mongoose";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
+import { ApiError } from "../utils/ApiError.js";
 const collectorSchema = new Schema(
     {
       employeeId: {
@@ -82,9 +83,7 @@ collectorSchema.methods.generateAccessToken = function () {
         );
     } catch (error) {
         console.error('Error generating access token:', error);
-        return next( new ApiError('Could not generate access token'));
-
-
+        throw new ApiError(500, 'Could not generate access token');
     }
 };
 
@@ -101,9 +100,7 @@ collectorSchema.methods.generateRefreshToken = function () {
         );
     } catch (error) {
         console.error('Error generating refresh token:', error);
-        return next( new ApiError('Could not generate refresh token'));
-
-
+        throw new ApiError(500, 'Could not generate refresh token');
     }
 };
   

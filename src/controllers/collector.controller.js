@@ -14,6 +14,7 @@ import { Vendor } from "../models/vendor.model.js";
 const generateAccessAndRefereshTokens = async (userId) => {
     try {
         const user = await User.findById(userId);
+        if (!user) throw new Error("User not found");
         const accessToken = user.generateAccessToken();
         const refreshToken = user.generateRefreshToken();
 
@@ -22,10 +23,7 @@ const generateAccessAndRefereshTokens = async (userId) => {
 
         return { accessToken, refreshToken };
     } catch (error) {
-        return next( new ApiError(            500,
-            "Something went wrong while generating referesh and access token"
-        ));
-
+        throw new ApiError(500, "Something went wrong while generating refresh and access tokens");
     }
 };
 
@@ -156,28 +154,32 @@ const loginUser = async (req, res, next) => {
 }
 
 const logoutUser = async (req, res, next) => {
-    await User.findByIdAndUpdate(
-        req.user._id,
-        {
-            $unset: {
-                refreshToken: 1, 
+    try {
+        await User.findByIdAndUpdate(
+            req.user._id,
+            {
+                $unset: {
+                    refreshToken: 1, 
+                },
             },
-        },
-        {
-            new: true,
-        }
-    );
+            {
+                new: true,
+            }
+        );
 
-    const options = {
-        httpOnly: true,
-        secure: true,
-    };
+        const options = {
+            httpOnly: true,
+            secure: true,
+        };
 
-    return res
-        .status(200)
-        .clearCookie("accessToken", options)
-        .clearCookie("refreshToken", options)
-        .json(new ApiResponse(200, {}, "User logged Out"));
+        return res
+            .status(200)
+            .clearCookie("accessToken", options)
+            .clearCookie("refreshToken", options)
+            .json(new ApiResponse(200, {}, "User logged out"));
+    } catch (error) {
+        return next(new ApiError(500, "Error during logout"));
+    }
 }
 
 const refreshAccessToken = 
@@ -237,111 +239,119 @@ const refreshAccessToken =
 
 // Update collector's current location
 const updateLocation = async (req, res, next) => {
-    const { coordinates } = req.body;
+    try {
+        const { coordinates } = req.body;
 
-    if (!coordinates || !Array.isArray(coordinates) || coordinates.length !== 2) {
-        return next(new ApiError(400, "Invalid coordinates format. Expected [longitude, latitude]"));
-    }
-
-    const [longitude, latitude] = coordinates;
-    if (longitude < -180 || longitude > 180 || latitude < -90 || latitude > 90) {
-        return next(new ApiError(400, "Invalid coordinates values"));
-    }
-
-    await Collector.findByIdAndUpdate(req.user._id, {
-        currentLocation: {
-            type: 'Point',
-            coordinates: coordinates
+        if (!coordinates || !Array.isArray(coordinates) || coordinates.length !== 2) {
+            return next(new ApiError(400, "Invalid coordinates format. Expected [longitude, latitude]"));
         }
-    }, { new: true });
 
-    return res.status(200).json(
-        new ApiResponse(200, { coordinates }, 'Location updated successfully')
-    );
+        const [longitude, latitude] = coordinates;
+        if (longitude < -180 || longitude > 180 || latitude < -90 || latitude > 90) {
+            return next(new ApiError(400, "Invalid coordinates values"));
+        }
+
+        await Collector.findByIdAndUpdate(req.user._id, {
+            currentLocation: {
+                type: 'Point',
+                coordinates: coordinates
+            }
+        }, { new: true });
+
+        return res.status(200).json(
+            new ApiResponse(200, { coordinates }, 'Location updated successfully')
+        );
+    } catch (error) {
+        return next(new ApiError(500, "Error updating location"));
+    }
 }
 
 const getAssignedPickups = async (req, res, next) => {
-    const collector = await Collector.findById(req.user._id)
-        .populate({
-            path: 'assignedPickups', 
-            match: { status: { $in: ['collector_assigned', 'collected_from_bin'] } }, // Pickups assigned to collector or collected but not delivered
-            populate: [
-                {
-                    path: 'bin', // Populate the Bin details
-                    populate: {
-                        path: 'assignedReports', // Get some reports from the bin to show details
-                        select: 'userReportedType approximateWeight coordinates reportedBy photoUrl mlIdentifiedType status',
+    try {
+        const collector = await Collector.findById(req.user._id)
+            .populate({
+                path: 'assignedPickups', 
+                match: { status: { $in: ['collector_assigned', 'collected_from_bin'] } }, // Pickups assigned to collector or collected but not delivered
+                populate: [
+                    {
+                        path: 'bin', // Populate the Bin details
                         populate: {
-                            path: 'reportedBy',
-                            select: 'fullName phoneNo address'
+                            path: 'assignedReports', // Get some reports from the bin to show details
+                            select: 'userReportedType approximateWeight coordinates reportedBy photoUrl mlIdentifiedType status',
+                            populate: {
+                                path: 'reportedBy',
+                                select: 'fullName phoneNo address'
+                            }
                         }
+                    },
+                    {
+                        path: 'vendor', // If assigned to a vendor
+                        select: 'companyName processingFacilityLocation address'
                     }
-                },
-                {
-                    path: 'vendor', // If assigned to a vendor
-                    select: 'companyName processingFacilityLocation address'
-                }
-            ]
-        })
-        .lean();
+                ]
+            })
+            .lean();
 
-    if (!collector) {
-
-    }
-
-    const formattedPickups = collector.assignedPickups.map(request => {
-        const bin = request.bin;
-        if (!bin) return null;
-
-        
-        const representativeReport = bin.assignedReports?.[0];
-        const pickupLocation = bin.location; // Bin's location is the pickup location
-
-        let dropoffLocation = null;
-        if (request.vendor && request.vendor.processingFacilityLocation) {
-            dropoffLocation = request.vendor.processingFacilityLocation;
-        } else {
-            
-            dropoffLocation = { type: 'Point', coordinates: [75.8169, 26.8365] }; //demo landfill location
+        if (!collector) {
+            return next(new ApiError(404, "Collector not found"));
         }
 
-        return {
-            requestId: request._id,
-            status: request.status,
-            bin: {
-                _id: bin._id,
-                binId: bin.binId,
-                location: bin.location,
-                fillLevel: bin.fillLevel,
-                wasteType: bin.wasteType,
-                currentWasteComposition: bin.currentWasteComposition,
-                representativeReport: representativeReport ? {
-                    _id: representativeReport._id,
-                    userReportedType: representativeReport.userReportedType,
-                    mlIdentifiedType: representativeReport.mlIdentifiedType,
-                    approximateWeight: representativeReport.approximateWeight,
-                    reporter: {
-                        name: representativeReport.reportedBy?.fullName,
-                        phone: representativeReport.reportedBy?.phoneNo,
-                        address: representativeReport.reportedBy?.address
-                    },
-                    photoUrl: representativeReport.photoUrl?.[0] || null // First image
-                } : null
-            },
-            vendor: request.vendor ? {
-                name: request.vendor.companyName,
-                facilityLocation: request.vendor.processingFacilityLocation,
-                address: request.vendor.address
-            } : null,
-            pickupLocation: pickupLocation, // Bin's location
-            dropoffLocation: dropoffLocation, // Vendor's facility or landfill
-            createdAt: request.createdAt
-        };
-    }).filter(Boolean); // Filter out nulls
+        const formattedPickups = (collector.assignedPickups || []).map(request => {
+            const bin = request.bin;
+            if (!bin) return null;
 
-    return res.status(200).json(
-        new ApiResponse(200, formattedPickups, 'Assigned pickups fetched successfully')
-    );
+            
+            const representativeReport = bin.assignedReports?.[0];
+            const pickupLocation = bin.location; // Bin's location is the pickup location
+
+            let dropoffLocation = null;
+            if (request.vendor && request.vendor.processingFacilityLocation) {
+                dropoffLocation = request.vendor.processingFacilityLocation;
+            } else {
+                
+                dropoffLocation = { type: 'Point', coordinates: [75.8169, 26.8365] }; //demo landfill location
+            }
+
+            return {
+                requestId: request._id,
+                status: request.status,
+                bin: {
+                    _id: bin._id,
+                    binId: bin.binId,
+                    location: bin.location,
+                    fillLevel: bin.fillLevel,
+                    wasteType: bin.wasteType,
+                    currentWasteComposition: bin.currentWasteComposition,
+                    representativeReport: representativeReport ? {
+                        _id: representativeReport._id,
+                        userReportedType: representativeReport.userReportedType,
+                        mlIdentifiedType: representativeReport.mlIdentifiedType,
+                        approximateWeight: representativeReport.approximateWeight,
+                        reporter: {
+                            name: representativeReport.reportedBy?.fullName,
+                            phone: representativeReport.reportedBy?.phoneNo,
+                            address: representativeReport.reportedBy?.address
+                        },
+                        photoUrl: representativeReport.photoUrl?.[0] || null // First image
+                    } : null
+                },
+                vendor: request.vendor ? {
+                    name: request.vendor.companyName,
+                    facilityLocation: request.vendor.processingFacilityLocation,
+                    address: request.vendor.address
+                } : null,
+                pickupLocation: pickupLocation, // Bin's location
+                dropoffLocation: dropoffLocation, // Vendor's facility or landfill
+                createdAt: request.createdAt
+            };
+        }).filter(Boolean); // Filter out nulls
+
+        return res.status(200).json(
+            new ApiResponse(200, formattedPickups, 'Assigned pickups fetched successfully')
+        );
+    } catch (error) {
+        return next(new ApiError(500, "Error fetching assigned pickups"));
+    }
 }
 
 

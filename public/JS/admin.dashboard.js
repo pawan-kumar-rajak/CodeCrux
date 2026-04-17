@@ -76,7 +76,7 @@ async function loadAdminProfile() {
         });
 
         if (!response.ok) {
-            return next( new ApiError('Failed to fetch admin profile'));
+            throw new Error('Failed to fetch admin profile');
 
 
         }
@@ -135,7 +135,7 @@ async function loadDashboardStats() {
         });
 
         if (!statsResponse.ok) {
-            return next( new ApiError('Failed to fetch dashboard stats'));
+            throw new Error('Failed to fetch dashboard stats');
 
 
         }
@@ -156,7 +156,7 @@ async function loadDashboardStats() {
         });
 
         if (!impactResponse.ok) {
-            return next( new ApiError('Failed to fetch environmental impact data'));
+            throw new Error('Failed to fetch environmental impact data');
 
 
         }
@@ -256,7 +256,7 @@ async function loadPendingReports() {
         });
 
         if (!response.ok) {
-            return next( new ApiError('Failed to fetch pending reports'));
+            throw new Error('Failed to fetch pending reports');
 
 
         }
@@ -527,7 +527,7 @@ async function approveReport() {
 
         if (!response.ok) {
             const errorData = await response.json();
-            return next( new ApiError(errorData.message || 'Failed to approve report'));
+            throw new Error(errorData.message || 'Failed to approve report');
 
 
         }
@@ -561,7 +561,7 @@ async function rejectReport() {
 
         if (!response.ok) {
             const errorData = await response.json();
-            return next( new ApiError(errorData.message || 'Failed to reject report'));
+            throw new Error(errorData.message || 'Failed to reject report');
 
 
         }
@@ -589,7 +589,7 @@ async function viewReportDetails(reportId) {
 
         
         if (!response.ok) {
-            return next( new ApiError(`HTTP error! status: ${response.status}`));
+            throw new Error(`HTTP error! status: ${response.status}`);
 
 
         }
@@ -597,7 +597,7 @@ async function viewReportDetails(reportId) {
         const result = await response.json();
         
         if (!result.success || !result.data) {
-            return next( new ApiError(result.message || 'Invalid response data'));
+            throw new Error(result.message || 'Invalid response data');
 
 
         }
@@ -697,7 +697,7 @@ async function loadCollectors() {
         });
         
         if (!response.ok) {
-            return next( new ApiError('Failed to fetch collectors'));
+            throw new Error('Failed to fetch collectors');
 
 
         }
@@ -772,14 +772,14 @@ async function viewCollectorDetails(collectorId) {
         });
         
         if (!response.ok) {
-            return next( new ApiError(`HTTP error! status: ${response.status}`));
+            throw new Error(`HTTP error! status: ${response.status}`);
 
 
         }
         
         const result = await response.json();
         if (!result.success || !result.data) {
-            return next( new ApiError(result.message || 'Invalid response data'));
+            throw new Error(result.message || 'Invalid response data');
 
 
         }
@@ -867,7 +867,7 @@ async function loadUsers() {
         });
         
         if (!response.ok) {
-            return next( new ApiError('Failed to fetch users'));
+            throw new Error('Failed to fetch users');
 
 
         }
@@ -938,7 +938,7 @@ async function loadVendors() {
         });
         
         if (!response.ok) {
-            return next( new ApiError('Failed to fetch vendors'));
+            throw new Error('Failed to fetch vendors');
 
 
         }
@@ -1014,14 +1014,12 @@ async function viewVendorDetails(VendorId) {
         });
         
         if (!response.ok) {
-            return next( new ApiError(`HTTP error! status: ${response.status}`));
-
-
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         const result = await response.json();
         if (!result.success || !result.data) {
-            return next( new ApiError(result.message || 'Invalid response data'));
+            throw new Error(result.message || 'Invalid response data');
 
 
         }
@@ -1123,7 +1121,7 @@ async function logoutUser() {
             setTimeout(() => { window.location.href = '/resident/login'; }, 1000); // Redirect to login
         } else {
             const errorData = await response.json();
-            return next( new ApiError(errorData.message || 'Logout failed'));
+            throw new Error(errorData.message || 'Logout failed');
 
 
         }

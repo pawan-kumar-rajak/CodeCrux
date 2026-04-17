@@ -35,13 +35,9 @@ function animateStats() {
 async function loadImpactData() {
     try {
         const response = await fetch('http://localhost:5000/api/v1/admin/get-environmental-impact');
-        
         if (!response.ok) {
-            return next( new ApiError('Failed to fetch impact data'));
-
-
+            throw new Error('Failed to fetch impact data');
         }
-        
         const data = await response.json();
         updateImpactStats(data.data);
         updateImpactChart(data.data);

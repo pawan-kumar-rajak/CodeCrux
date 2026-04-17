@@ -100,7 +100,7 @@ document.getElementById('login-form').addEventListener('submit', async (event) =
                 apiEndpoint = '/api/v1/collector/login';
                 break;
             default:
-                return next( new ApiError('Invalid user type'));
+                throw new Error('Invalid user type');
 
 
         }
@@ -117,7 +117,7 @@ document.getElementById('login-form').addEventListener('submit', async (event) =
         const data = await response.json();
 
         if (!response.ok) {
-            return next( new ApiError(data.message || 'Login failed'));
+            throw new Error(data.message || 'Login failed');
 
 
         }
@@ -187,7 +187,7 @@ async function submitWasteReport(reportData) {
   const accessToken = getCookie('accessToken');
   if (!accessToken) {
     showSnackbar('Please login to submit waste reports.', 'error');
-    return next( new ApiError('Not authenticated'));
+    throw new Error('Not authenticated');
 
 
   }
@@ -211,7 +211,7 @@ async function submitWasteReport(reportData) {
     } else {
       const errorMessage = responseData.message || 'Failed to submit waste report.';
       showSnackbar(errorMessage, 'error');
-      return next( new ApiError(errorMessage));
+      throw new Error(errorMessage);
 
 
     }
@@ -226,7 +226,7 @@ async function getResidentDashboard() {
   const accessToken = getCookie('accessToken');
   if (!accessToken) {
     showSnackbar('Please login to view dashboard.', 'error');
-    return next( new ApiError('Not authenticated'));
+    throw new Error('Not authenticated');
 
 
   }
@@ -247,7 +247,7 @@ async function getResidentDashboard() {
     } else {
       const errorMessage = responseData.message || 'Failed to fetch dashboard data.';
       showSnackbar(errorMessage, 'error');
-      return next( new ApiError(errorMessage));
+      throw new Error(errorMessage);
 
 
     }

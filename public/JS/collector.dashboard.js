@@ -926,16 +926,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     if (!response.ok) {
-        return next( new ApiError(`HTTP error ${response.status}: Failed to fetch ${url}`));
-
-
+        throw new Error(`HTTP error ${response.status}: Failed to fetch ${url}`);
     }
 
     const result = await response.json();
     if (!result.success) {
-        return next( new ApiError(result.message || `API error for ${url}`));
-
-
+        throw new Error(result.message || `API error for ${url}`);
     }
 
     return result.data;

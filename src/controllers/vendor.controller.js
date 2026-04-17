@@ -13,6 +13,7 @@ import { Resident } from "../models/resident.model.js";
 const generateAccessAndRefereshTokens = async (userId) => {
     try {
         const user = await User.findById(userId);
+        if (!user) throw new Error("User not found");
         const accessToken = user.generateAccessToken();
         const refreshToken = user.generateRefreshToken();
 
@@ -21,10 +22,7 @@ const generateAccessAndRefereshTokens = async (userId) => {
 
         return { accessToken, refreshToken };
     } catch (error) {
-        return next( new ApiError(            500,
-            "Something went wrong while generating referesh and access token"
-        ));
-
+        throw new ApiError(500, "Something went wrong while generating refresh and access tokens");
     }
 };
 
@@ -138,136 +136,128 @@ const registerVendor = async (req, res, next) => {
 
 
 const loginUser = async (req, res, next) => {
-    const { email, password } = req.body; 
-    
-    if (!email || !password) {
-        return next( new ApiError(400, "Email and password are required"));
-
-    }
-
-    const user = await User.findOne({ email });
-
-    if (!user) {
-        return next( new ApiError(404, "Vendor does not exist"));
-
-    }
-
-    const isPasswordValid = await user.isPasswordCorrect(password);
-
-    if (!isPasswordValid) {
-        return next( new ApiError(401, "Invalid Vendor credentials"))
-    }
-
-    const { accessToken, refreshToken } =
-        await generateAccessAndRefereshTokens(user._id);
-
-    const loggedInUser = await User.findById(user._id).select(
-        "-password -refreshToken"
-    );
-
-    const options = {
-        httpOnly: true,
-        secure: true,
-    };
-
-    return res
-        .status(200)
-        .cookie("accessToken", accessToken, options)
-        .cookie("refreshToken", refreshToken, options)
-        .json(
-            new ApiResponse(
-                200,
-                {
-                    user: loggedInUser,
-                    accessToken,
-                    refreshToken,
-                },
-                "Vendor logged In Successfully"
-            )
-        );
-}
-
-const logoutUser = async (req, res) => {
-    await User.findByIdAndUpdate(
-        req.user._id,
-        {
-            $unset: {
-                refreshToken: 1, 
-            },
-        },
-        {
-            new: true,
-        }
-    );
-
-    const options = {
-        httpOnly: true,
-        secure: true,
-    };
-
-    return res
-        .status(200)
-        .clearCookie("accessToken", options)
-        .clearCookie("refreshToken", options)
-        .json(new ApiResponse(200, {}, "User logged Out"));
-}
-
-const refreshAccessToken = 
-    async (req, res) => {
-        const incomingRefreshToken =
-            req.cookies.refreshToken || req.body.refreshToken;
-
-        if (!incomingRefreshToken) {
-            return next( new ApiError(401, "unauthorized request"));
-
+    try {
+        const { email, password } = req.body; 
+        
+        if (!email || !password) {
+            return next(new ApiError(400, "Email and password are required"));
         }
 
-        try {
-            const decodedToken = jwt.verify(
-                incomingRefreshToken,
-                process.env.REFRESH_TOKEN_SECRET
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            return next(new ApiError(404, "Vendor does not exist"));
+        }
+
+        const isPasswordValid = await user.isPasswordCorrect(password);
+
+        if (!isPasswordValid) {
+            return next(new ApiError(401, "Invalid Vendor credentials"));
+        }
+
+        const { accessToken, refreshToken } = await generateAccessAndRefereshTokens(user._id);
+
+        const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
+
+        const options = {
+            httpOnly: true,
+            secure: true,
+        };
+
+        return res
+            .status(200)
+            .cookie("accessToken", accessToken, options)
+            .cookie("refreshToken", refreshToken, options)
+            .json(
+                new ApiResponse(
+                    200,
+                    {
+                        user: loggedInUser,
+                        accessToken,
+                        refreshToken,
+                    },
+                    "Vendor logged in successfully"
+                )
             );
-
-            const user = await User.findById(decodedToken?._id);
-
-            if (!user) {
-                return next( new ApiError(401, "Invalid refresh token"));
-
-            }
-
-            if (incomingRefreshToken !== user?.refreshToken) {
-                return next( new ApiError(                    401,
-                    "Refresh token is expired or used"
-                ));
-
-            }
-
-            const options = {
-                httpOnly: true,
-                secure: true,
-            };
-
-            const { accessToken, newRefreshToken } =
-                await generateAccessAndRefereshTokens(user._id);
-
-            return res
-                .status(200)
-                .cookie("accessToken", accessToken, options)
-                .cookie("refreshToken", newRefreshToken, options)
-                .json(
-                    new ApiResponse(
-                        200,
-                        { accessToken, refreshToken: newRefreshToken },
-                        "Access token refreshed"
-                    )
-                );
-        } catch (error) {
-            return next( new ApiError(                401,
-                error?.message || "Invalid refresh token"
-            ));
-
-        }
+    } catch (error) {
+        return next(new ApiError(500, error.message || "Error during login"));
     }
+}
+
+const logoutUser = async (req, res, next) => {
+    try {
+        await User.findByIdAndUpdate(
+            req.user._id,
+            {
+                $unset: {
+                    refreshToken: 1, 
+                },
+            },
+            {
+                new: true,
+            }
+        );
+
+        const options = {
+            httpOnly: true,
+            secure: true,
+        };
+
+        return res
+            .status(200)
+            .clearCookie("accessToken", options)
+            .clearCookie("refreshToken", options)
+            .json(new ApiResponse(200, {}, "User logged out"));
+    } catch (error) {
+        return next(new ApiError(500, "Error during logout"));
+    }
+}
+
+const refreshAccessToken = async (req, res, next) => {
+    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
+
+    if (!incomingRefreshToken) {
+        return next(new ApiError(401, "Unauthorized request"));
+    }
+
+    try {
+        const decodedToken = jwt.verify(
+            incomingRefreshToken,
+            process.env.REFRESH_TOKEN_SECRET
+        );
+
+        const user = await User.findById(decodedToken?._id);
+
+        if (!user) {
+            return next(new ApiError(401, "Invalid refresh token"));
+        }
+
+        if (incomingRefreshToken !== user?.refreshToken) {
+            return next(new ApiError(401, "Refresh token is expired or used"));
+        }
+
+        const options = {
+            httpOnly: true,
+            secure: true,
+        };
+
+        const { accessToken, newRefreshToken } = await generateAccessAndRefereshTokens(user._id);
+
+        return res
+            .status(200)
+            .cookie("accessToken", accessToken, options)
+            .cookie("refreshToken", newRefreshToken, options)
+            .json(
+                new ApiResponse(
+                    200,
+                    { accessToken, refreshToken: newRefreshToken },
+                    "Access token refreshed"
+                )
+            );
+    } catch (error) {
+        return next(new ApiError(401, error?.message || "Invalid refresh token"));
+    }
+}
 
 
 const getAvailableWaste = async (req, res, next) => {
@@ -339,93 +329,97 @@ const getAvailableWaste = async (req, res, next) => {
 // Request waste collection
 // MODIFIED FUNCTION: Assigns the closest collector instead of a random one.
 const requestWasteCollection = async (req, res, next) => {
-    let { binIds } = req.body;
+    try {
+        let { binIds } = req.body;
 
-    if (!Array.isArray(binIds) || binIds.length === 0) {
-        return next(new ApiError(400, 'binIds must be a non-empty array.'));
-    }
-
-    const successfullyRequested = [];
-    const failedRequests = [];
-
-    for (const binId of binIds) {
-        if (!mongoose.Types.ObjectId.isValid(binId)) {
-            failedRequests.push({ binId, reason: "Invalid ID format." });
-            continue;
+        if (!Array.isArray(binIds) || binIds.length === 0) {
+            return next(new ApiError(400, 'binIds must be a non-empty array.'));
         }
 
-        const bin = await Bin.findById(binId).lean();
-        if (!bin) {
-            failedRequests.push({ binId, reason: "Bin not found." });
-            continue;
-        }
+        const successfullyRequested = [];
+        const failedRequests = [];
 
-        if (!bin.assignedZone) {
-            failedRequests.push({ binId, reason: `Bin ${bin.binId} has no assigned zone.` });
-            continue;
-        }
+        for (const binId of binIds) {
+            if (!mongoose.Types.ObjectId.isValid(binId)) {
+                failedRequests.push({ binId, reason: "Invalid ID format." });
+                continue;
+            }
 
-        const existingRequest = await WasteProcessingRequest.findOne({
-            bin: binId,
-            status: { $in: ['pending_vendor_offer', 'vendor_accepted', 'collector_assigned', 'collected_from_bin'] }
-        });
+            const bin = await Bin.findById(binId).lean();
+            if (!bin) {
+                failedRequests.push({ binId, reason: "Bin not found." });
+                continue;
+            }
 
-        if (existingRequest) {
-            failedRequests.push({ binId, reason: `Bin ${bin.binId} already has an active collection request.` });
-            continue;
-        }
+            if (!bin.assignedZone) {
+                failedRequests.push({ binId, reason: `Bin ${bin.binId} has no assigned zone.` });
+                continue;
+            }
 
-        // Find the collector in the correct zone who is closest to the bin.
-        let closestCollector = await Collector.findOne({
-            assignedZone: bin.assignedZone,
-            currentLocation: {
-                $nearSphere: {
-                    $geometry: bin.location, 
-                    // Optional: Set a max distance in meters (e.g., 5km)
-                    // $maxDistance: 5000
+            const existingRequest = await WasteProcessingRequest.findOne({
+                bin: binId,
+                status: { $in: ['pending_vendor_offer', 'vendor_accepted', 'collector_assigned', 'collected_from_bin'] }
+            });
+
+            if (existingRequest) {
+                failedRequests.push({ binId, reason: `Bin ${bin.binId} already has an active collection request.` });
+                continue;
+            }
+
+            // Find the collector in the correct zone who is closest to the bin.
+            let closestCollector = await Collector.findOne({
+                assignedZone: bin.assignedZone,
+                currentLocation: {
+                    $nearSphere: {
+                        $geometry: bin.location, 
+                        // Optional: Set a max distance in meters (e.g., 5km)
+                        // $maxDistance: 5000
+                    }
+                }
+            });
+            
+            
+
+            if (!closestCollector) {
+                closestCollector = await Collector.findOne({ assignedZone: bin.assignedZone });
+                if(!closestCollector){
+
+                    failedRequests.push({ binId, reason: `No collectors are currently available or nearby in zone '${bin.assignedZone}' for Bin ${bin.binId}.` });
+                    continue ;
                 }
             }
-        });
-        
-        
 
-        if (!closestCollector) {
-            closestCollector = await Collector.findOne({ assignedZone: bin.assignedZone });
-            if(!closestCollector){
+            // All checks passed, create the request and assign it to the closest collector
+            const newRequest = await WasteProcessingRequest.create({
+                bin: binId,
+                vendor: req.user._id,
+                collector: closestCollector._id, // Assign to the closest one found
+                status: 'collector_assigned',
+                requestedWasteWeight: Object.values(bin.currentWasteComposition || {}).reduce((sum, val) => sum + val, 0),
+                requestedWasteType: bin.wasteType
+            });
 
-                failedRequests.push({ binId, reason: `No collectors are currently available or nearby in zone '${bin.assignedZone}' for Bin ${bin.binId}.` });
-                continue ;
-            }
+            await Collector.findByIdAndUpdate(closestCollector._id, {
+                $push: { assignedPickups: newRequest._id }
+            });
+
+            await WasteReport.updateMany(
+                { assignedBin: binId, status: 'assigned_to_bin' },
+                { $set: { status: 'awaiting_collection' } }
+            );
+
+            successfullyRequested.push(newRequest);
         }
 
-        // All checks passed, create the request and assign it to the closest collector
-        const newRequest = await WasteProcessingRequest.create({
-            bin: binId,
-            vendor: req.user._id,
-            collector: closestCollector._id, // Assign to the closest one found
-            status: 'collector_assigned',
-            requestedWasteWeight: Object.values(bin.currentWasteComposition || {}).reduce((sum, val) => sum + val, 0),
-            requestedWasteType: bin.wasteType
-        });
+        if (successfullyRequested.length === 0) {
+            const errorReason = failedRequests[0]?.reason || "Unknown error.";
+            return next(new ApiError(400, `No valid bins could be requested. First error: ${errorReason}`));
+        }
 
-        await Collector.findByIdAndUpdate(closestCollector._id, {
-            $push: { assignedPickups: newRequest._id }
-        });
-
-        await WasteReport.updateMany(
-            { assignedBin: binId, status: 'assigned_to_bin' },
-            { $set: { status: 'awaiting_collection' } }
-        );
-
-        successfullyRequested.push(newRequest);
+        return res.status(201).json(new ApiResponse(201, { successfullyRequested, failedRequests }, 'Collection request processed and assigned to the closest available collectors.'));
+    } catch (error) {
+        return next(new ApiError(500, "Error during waste collection request: " + error.message));
     }
-
-    if (successfullyRequested.length === 0) {
-        const errorReason = failedRequests[0]?.reason || "Unknown error.";
-        return next(new ApiError(400, `No valid bins could be requested. First error: ${errorReason}`));
-    }
-
-    res.status(201).json(new ApiResponse(201, { successfullyRequested, failedRequests }, 'Collection request processed and assigned to the closest available collectors.'));
 }
 
 

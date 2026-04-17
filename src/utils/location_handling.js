@@ -38,8 +38,7 @@ async function AddressFromPincode(pincode) {
 		console.log(data)
 
         if (data[0].Status !== "Success") {
-           return next( new ApiError(404, 'pincode invalid or could not fetch address from server'));
-
+           throw new ApiError(404, 'pincode invalid or could not fetch address from server');
         }
 
         // Extract district and city
@@ -55,12 +54,10 @@ async function AddressFromPincode(pincode) {
 	} catch (error) {
 		if (error.code === 'ETIMEDOUT') {
 			console.error('Request timed out');
-			return next( new ApiError(504, 'Request timed out'));
-
+			throw new ApiError(504, 'Request timed out');
 		}
 		console.error(error);
-		return next( new ApiError(500, 'internal src error: ' + error.message));
-
+		throw new ApiError(500, 'internal src error: ' + error.message);
 	}
 	
 

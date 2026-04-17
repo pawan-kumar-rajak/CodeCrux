@@ -4,16 +4,14 @@ import { ApiError } from './ApiError.js';
 export const applyCoupon = async (totalPrice, couponCode) => {
   const coupon = await Coupon.findOne({ code: couponCode, isActive: true });
 
-  if (!coupon) return next( new ApiError(401,'Invalid or expired coupon code.'));
-
+  if (!coupon) throw new ApiError(401,'Invalid or expired coupon code.');
 
   const now = new Date();
   if (now < coupon.validFrom || now > coupon.validTill)
-    return next( new ApiError(500,'Coupon is not valid at this time.'));
-
+    throw new ApiError(500,'Coupon is not valid at this time.');
 
   if (totalPrice < coupon.minPurchase)
-    return next( new ApiError(401,`Minimum purchase of ₹${coupon.minPurchase} required.`));
+    throw new ApiError(401,`Minimum purchase of ₹${coupon.minPurchase} required.`);
 
 
   let discount = 0;

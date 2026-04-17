@@ -35,10 +35,7 @@ const generateAccessAndRefereshTokens = async (userId) => {
 
 		return { accessToken, refreshToken };
 	} catch (error) {
-		return next( new ApiError(			500,
-			"Something went wrong while generating referesh and access token"
-		));
-
+		throw new ApiError(500, "Something went wrong while generating refresh and access tokens");
 	}
 };
 
@@ -275,79 +272,81 @@ const registerUser = async (req, res, next) => {
 }
 
 const loginUser = async (req, res, next) => {
-	const { email, username, password } = req.body;
+	try {
+		const { email, username, password } = req.body;
 
-	if (!(username || email)) {
-		return next( new ApiError(			400,
-			"username or email is required"
-		));
+		if (!(username || email)) {
+			return next(new ApiError(400, "Username or email is required"));
+		}
 
+		const user = await User.findOne({ email: email });
+
+		if (!user) {
+			return next(new ApiError(404, "User does not exist"));
+		}
+
+		const isPasswordValid = await user.isPasswordCorrect(password);
+
+		if (!isPasswordValid) {
+			return next(new ApiError(401, "Invalid user credentials"));
+		}
+
+		const { accessToken, refreshToken } = await generateAccessAndRefereshTokens(user._id);
+
+		const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
+
+		const options = {
+			httpOnly: true,
+			secure: true,
+		};
+
+		return res
+			.status(200)
+			.cookie("accessToken", accessToken, options)
+			.cookie("refreshToken", refreshToken, options)
+			.json(
+				new ApiResponse(
+					200,
+					{
+						user: loggedInUser,
+						accessToken,
+						refreshToken,
+					},
+					"User logged in successfully"
+				)
+			);
+	} catch (error) {
+		return next(new ApiError(500, error.message || "An error occurred during login"));
 	}
-
-	const user = await User.findOne({ email: email });
-
-	if (!user) {
-		return next(new ApiError(404, "User does not exist"))
-	}
-
-	const isPasswordValid = await user.isPasswordCorrect(password);
-
-	if (!isPasswordValid) {
-		return next(new ApiError(401, "Invalid user credentials"))
-	}
-
-	const { accessToken, refreshToken } =
-		await generateAccessAndRefereshTokens(user._id);
-
-	const loggedInUser = await User.findById(user._id).select(
-		"-password -refreshToken"
-	);
-
-	const options = {
-		httpOnly: true,
-		secure: true,
-	};
-
-	return res
-		.status(200)
-		.cookie("accessToken", accessToken, options)
-		.cookie("refreshToken", refreshToken, options)
-		.json(
-			new ApiResponse(
-				200,
-				{
-					user: loggedInUser,
-					accessToken,
-					refreshToken,
-				},
-				"User logged In Successfully"
-			)
-		);
 }
 
-const logoutUser = async (req, res) => {
-	await User.findByIdAndUpdate(
-		req.user._id,
-		{
-			$unset: {
-				refreshToken: 1,
+const logoutUser = async (req, res, next) => {
+	try {
+		await User.findByIdAndUpdate(
+			req.user._id,
+			{
+				$unset: {
+					refreshToken: 1,
+				},
 			},
-		},
-		{
-			new: true,
-		}
-	);
+			{
+				new: true,
+			}
+		);
 
-	const options = {
-		httpOnly: true,
-		secure: true,
-	};
+		const options = {
+			httpOnly: true,
+			secure: true,
+		};
 
-	return res
-		.status(200)
-		.clearCookie("accessToken", options)
-		.clearCookie("refreshToken", options)
-		.json(new ApiResponse(200, {}, "User logged Out"));
+		return res
+			.status(200)
+			.clearCookie("accessToken", options)
+			.clearCookie("refreshToken", options)
+			.json(new ApiResponse(200, {}, "User logged out"));
+	} catch (error) {
+		return next(new ApiError(500, "Error during logout"));
+	}
 }
 
 const refreshAccessToken = 
@@ -407,18 +406,15 @@ const refreshAccessToken =
 		}
 	}
 
-const changeCurrentPassword = 
-	async (req, res) => {
+const changeCurrentPassword = async (req, res, next) => {
+	try {
 		const { oldPassword, newPassword } = req.body;
 
 		const user = await User.findById(req.user?._id);
-		const isPasswordCorrect = await user.isPasswordCorrect(
-			oldPassword
-		);
+		const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
 
 		if (!isPasswordCorrect) {
-			return next( new ApiError(400, "Invalid old password"));
-
+			return next(new ApiError(400, "Invalid old password"));
 		}
 
 		user.password = newPassword;
@@ -433,7 +429,10 @@ const changeCurrentPassword =
 					"Password changed successfully"
 				)
 			);
+	} catch (error) {
+		return next(new ApiError(500, "Error changing password"));
 	}
+}
 
 const getCurrentUser = async (req, res,next) => {
 	
@@ -532,15 +531,12 @@ const updateUserAvatar = async (req, res,next) => {
 // Modified: Main function for residents to report waste
 const reportWaste = async (req, res, next) => {
 	let imagePath = null;
-	let session;
+	let session = null;
 	try {
-		session = await mongoose.startSession();
-		session.startTransaction();
-
 		const { userReportedType, approximateWeight, assignedZone, longitude, latitude } = req.body;
 		const residentId = req.user._id;
-		const coordinates = [parseFloat(longitude), parseFloat(latitude)]; // Ensure coordinates are numbers
 
+		// Validation
 		if (!req.files || req.files.length === 0) {
 			return next(new ApiError(400, "At least one image is required."));
 		}
@@ -548,13 +544,15 @@ const reportWaste = async (req, res, next) => {
 			return next(new ApiError(400, "All required fields (waste type, weight, zone, coordinates) must be provided."));
 		}
 
+		const coordinates = [parseFloat(longitude), parseFloat(latitude)];
 		const file = req.files[0];
-		imagePath = file.path; // Multer saves the file temporarily here
-		
+		imagePath = file.path;
+
+		// 1. ML analysis
 		let mlResponseData = null;
 		try {
 			console.log("Calling external Python ML service for detection...");
-			mlResponseData = await mlService.detectWaste(file.path, {
+			mlResponseData = await mlService.detectWaste(imagePath, {
 				user_id: residentId.toString(),
 				user_reported_type: userReportedType,
 				weight: parseFloat(approximateWeight),
@@ -563,96 +561,103 @@ const reportWaste = async (req, res, next) => {
 			});
 			console.log("External ML Service Response:", mlResponseData);
 
-			if (!mlResponseData.success) {
-				console.warn('External ML Service reported failure:', mlResponseData.message || 'Unknown ML error');
-				return next(new ApiError(500, "No reponse recieved from ML server"))
+			if (!mlResponseData) {
+				throw new Error("No response received from ML server");
 			}
 		} catch (mlError) {
 			console.error('External ML Service Processing Error:', mlError.message);
+			// Fallback if ML fails, but we don't block the user
 			mlResponseData = {
 				success: false,
 				message: `ML detection failed: ${mlError.message}`,
-				detection_results: { detected_waste: [], all_detections: [], highest_confidence: 0, total_objects_detected: 0 },
+				detection_results: { 
+					detected_waste: [], 
+					all_detections: [], 
+					highest_confidence: 0, 
+					total_objects_detected: 0 
+				},
 				waste_analysis: { recyclable: false, waste_details: {} }
 			};
 		}
-		console.log('ml repnse:', mlResponseData)
-		// 2. Perform fraud detection in Express.js
+
+		// Transaction starts here as we are about to modify DB
+		session = await mongoose.startSession();
+		session.startTransaction();
+
+		// Safety check: ensure mlResponseData is an object before proceeding
+		if (!mlResponseData || typeof mlResponseData !== 'object') {
+			mlResponseData = {
+				success: false,
+				detection_results: { detected_waste: [], all_detections: [], highest_confidence: 0 },
+				waste_analysis: { recyclable: false, waste_details: {} }
+			};
+		}
+
+		// 2. Fraud detection
 		const fraudDetection = await detectFraud({
 			userId: residentId,
-			wasteType: mlResponseData.detection_results.detected_waste[0] || userReportedType,
+			wasteType: mlResponseData.detection_results?.detected_waste?.[0] || userReportedType,
 			weight: parseFloat(approximateWeight),
 			location: [parseFloat(latitude), parseFloat(longitude)],
 			timestamp: new Date()
 		});
-		console.log("fraud detection: ", fraudDetection)
 
-		// 3. Perform vendor matching in Express.js
+		// 3. Vendor matching
 		const matchedVendors = await matchVendors({
-			wasteType: mlResponseData.detection_results.detected_waste[0] || userReportedType,
+			wasteType: mlResponseData.detection_results?.detected_waste?.[0] || userReportedType,
 			weight: parseFloat(approximateWeight),
 			location: [parseFloat(latitude), parseFloat(longitude)]
 		});
 
-		// Calculate energy metrics based on waste type
-		const mlIdentifiedType = mlResponseData.detection_results.detected_waste[0] || userReportedType;
-		const wasteDetails = mlResponseData.waste_analysis.waste_details || {
+		const mlIdentifiedType = mlResponseData.detection_results?.detected_waste?.[0] || userReportedType;
+		const wasteDetails = mlResponseData.waste_analysis?.waste_details || {
 			energy_potential: 0,
 			co2_reduction: 0,
 			market_value: 0
 		};
 
-		const energyPotential = Math.round(approximateWeight * wasteDetails.energy_potential * 100) / 100;
-		const co2Reduction = Math.round(approximateWeight * wasteDetails.co2_reduction * 100) / 100;
-		const processingCostEstimate = Math.round(approximateWeight * wasteDetails.market_value * 100) / 100;
-		const userAiMatch = mlResponseData.detection_results.detected_waste[0];
-		// 2. Upload image(s) to Cloudinary (after ML processing, using Multer's temp file)
+		const energyPotential = Math.round(approximateWeight * (wasteDetails.energy_potential || 0) * 100) / 100;
+		const co2Reduction = Math.round(approximateWeight * (wasteDetails.co2_reduction || 0) * 100) / 100;
+		const processingCostEstimate = Math.round(approximateWeight * (wasteDetails.market_value || 0) * 100) / 100;
+
+		// 4. Cloudinary upload
 		const uploadedImages = await MultiUploadOnCloudinary(
 			req.files.map((f) => f.path),
 			'Waste'
 		);
-		if (uploadedImages.length === 0) {
-			await session.abortTransaction();
-			session.endSession();
-			return next(new ApiError(500, "Failed to upload images to Cloudinary."));
+		if (!uploadedImages || uploadedImages.length === 0) {
+			throw new ApiError(500, "Failed to upload images to Cloudinary.");
 		}
 
-		// 3. Find the nearest suitable Bin or create one (simplified)
+		// 5. Bin assignment
 		let targetBin = await Bin.findOne({
 			location: {
 				$near: {
-					$geometry: {
-						type: "Point",
-						coordinates: coordinates // [longitude, latitude]
-					},
-					$maxDistance: 500 // Search within 5 km for a suitable bin
+					$geometry: { type: "Point", coordinates: coordinates },
+					$maxDistance: 5000 // 5km radius
 				}
 			},
 			wasteType: { $in: [mlIdentifiedType, 'mixed'] }
-		}).sort({ fillLevel: 1 }).session(session); // Prefer less full bins
+		}).sort({ fillLevel: 1 }).session(session);
 
 		let binCreationMessage = '';
 		if (!targetBin) {
-			targetBin = await Bin.create([{
+			const newBin = await Bin.create([{
 				binId: `BIN-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
 				location: { type: "Point", coordinates: coordinates },
 				fillLevel: 0,
 				wasteType: mlIdentifiedType || 'mixed',
 				assignedZone: assignedZone
 			}], { session });
-			targetBin = targetBin[0];
-			console.log(`Created new bin: ${targetBin.binId}`);
-			binCreationMessage = `No nearby bin found. A new virtual bin (${targetBin.binId}) has been created for your waste.`;
+			targetBin = newBin[0];
+			binCreationMessage = `No nearby bin found. Created new bin ${targetBin.binId}.`;
 		}
 
-		// 4. Update the Bin's fill level and waste composition
-		const currentFillLevel = targetBin.fillLevel;
-		const binCapacity = 100; // Assume 100kg capacity for simplicity
-		const weightPercentage = (approximateWeight / binCapacity) * 100;
-		let newFillLevel = currentFillLevel + weightPercentage;
-		newFillLevel = Math.min(newFillLevel, 100);
+		// Update bin state
+		const weightPercentage = (parseFloat(approximateWeight) / 100) * 100; // Capacity assumption
+		const newFillLevel = Math.min((targetBin.fillLevel || 0) + weightPercentage, 100);
 
-		const updatedComposition = new Map(targetBin.currentWasteComposition);
+		const updatedComposition = new Map(targetBin.currentWasteComposition || []);
 		const existingWeight = updatedComposition.get(mlIdentifiedType) || 0;
 		updatedComposition.set(mlIdentifiedType, existingWeight + parseFloat(approximateWeight));
 
@@ -666,13 +671,11 @@ const reportWaste = async (req, res, next) => {
 			$push: { assignedReports: residentId }
 		}, { new: true, session });
 
-		// 5. Create the WasteReport with reference to the assigned Bin
+		// 6. Report creation
+		const userAiMatch = mlResponseData.detection_results?.detected_waste?.[0];
 		let reportStatus = 'assigned_to_bin';
-		if (!mlResponseData.success || !userAiMatch) {
+		if (!mlResponseData.success || !userAiMatch || userAiMatch !== userReportedType) {
 			reportStatus = 'unidentified';
-		}
-		if(userAiMatch != userReportedType){
-			reportStatus = 'unidentified'
 		}
 
 		const newReport = await WasteReport.create([{
@@ -686,18 +689,19 @@ const reportWaste = async (req, res, next) => {
 			assignedZone,
 			assignedBin: targetBin._id,
 			mlDetails: {
-				confidence: mlResponseData.detection_results.highest_confidence,
-				recyclable: mlResponseData.waste_analysis.recyclable,
+				confidence: mlResponseData.detection_results?.highest_confidence || 0,
+				recyclable: mlResponseData.waste_analysis?.recyclable || false,
 				energyPotential: energyPotential,
 				co2Reduction: co2Reduction,
-				allDetections: mlResponseData.detection_results.allDetections,
+				allDetections: mlResponseData.detection_results?.all_detections || [],
 				fraudDetection: fraudDetection,
 				vendorMatches: matchedVendors
 			}
 		}], { session });
+
 		const createdReport = newReport[0];
 
-		// 6. Update resident's rewards
+		// 7. Rewards
 		const reportingReward = 10;
 		await Resident.findByIdAndUpdate(residentId, {
 			$push: { wasteReports: createdReport._id },
@@ -707,32 +711,22 @@ const reportWaste = async (req, res, next) => {
 		await session.commitTransaction();
 		session.endSession();
 
-		// Cleanup: Delete temporary files from Multer's upload directory
+		// Cleanup local files after success
 		if (imagePath && fs.existsSync(imagePath)) {
-			try { fs.unlinkSync(imagePath); } catch (cleanupError) { console.error('Error cleaning up temporary file:', imagePath, cleanupError); }
+			try { fs.unlinkSync(imagePath); } catch (e) {}
 		}
 
-		let finalMessage = `Waste report submitted and assigned to bin ${targetBin.binId}! You earned ${reportingReward} points.`;
-		if (binCreationMessage) {
-			finalMessage = binCreationMessage + ' ' + finalMessage;
-		}
-		if (reportStatus === 'unidentified') {
-			finalMessage += ' Your report needs admin review due to AI mismatch or uncertainty.';
-		}
-		console.log("report submitted successfully")
+		console.log("created Report:" , createdReport)
+
 		return res.status(201).json(
-			new ApiResponse(
-				201,
-				{
-					report: createdReport,
-					mlAnalysis: mlResponseData, // Return the full ML analysis to the frontend
-					processingCostEstimate,
-					rewardPoints: reportingReward,
-					assignedBin: targetBin,
-					message: finalMessage
-				},
-				"Waste report created successfully"
-			)
+			new ApiResponse(201, {
+				report: createdReport,
+				mlAnalysis: mlResponseData, // Restored for frontend mapping
+				processingCostEstimate,     // Restored for frontend mapping
+				rewardPoints: reportingReward,
+				assignedBin: targetBin,      // Restored full object for frontend mapping
+				message: binCreationMessage + " Waste report submitted and assigned to bin " + targetBin.binId + "! You earned " + reportingReward + " points."
+			}, "Waste report created successfully")
 		);
 
 	} catch (error) {
@@ -740,11 +734,11 @@ const reportWaste = async (req, res, next) => {
 			await session.abortTransaction();
 			session.endSession();
 		}
-		console.error('Error in reportWaste:', error);
 		if (imagePath && fs.existsSync(imagePath)) {
-			try { fs.unlinkSync(imagePath); } catch (cleanupError) { console.error('Error cleaning up temporary file in error handler:', imagePath, cleanupError); }
+			try { fs.unlinkSync(imagePath); } catch (e) {}
 		}
-		return next(new ApiError(500, "Error creating waste report: " + error.message));
+		console.error('Error in reportWaste:', error);
+		return next(new ApiError(error.statusCode || 500, error.message || "Error creating waste report"));
 	}
 };
 
